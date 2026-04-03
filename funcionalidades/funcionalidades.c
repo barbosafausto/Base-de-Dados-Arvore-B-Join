@@ -200,23 +200,23 @@ void selectWhere(char *nomeArquivoBin, int nBuscas) {
 }
 
 
-
-
 // Funcionalidade [4] - Delete
+// [4] Implementação da funcionalidade de deletar registros que atendem a filtros
 void deleteWhere(char *nomeArquivoBin, int nRemocoes) {
 
-    //Vetor que vai guardar os filtros da busca
+    // Recebimento dos campos que compõem os filtros de todas as remoções
     Busca *busca = (Busca*) malloc(nRemocoes * sizeof(Busca));
-
     utils_recebeCampos(busca, nRemocoes);
 
-    // Processamento das deleções
+    // Abertura do arquivo
     FILE *arquivoBin = fopen(nomeArquivoBin, "rb+");
     if(arquivoBin == NULL) {
         printf("Falha no processamento do arquivo.\n");
         return;
     }
 
+    // --- Setando consistência do arquivo para '0'
+    // Leitura do cabeçalho
     Cabecalho cabecalho;
     lerCabecalho(&cabecalho, arquivoBin);
     
@@ -224,50 +224,62 @@ void deleteWhere(char *nomeArquivoBin, int nRemocoes) {
     if (registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0, 0))
         return;
     
+    // Processamento das Remoções
     for (int i = 0; i < nRemocoes; i++) {
-        fseek(arquivoBin, 17, SEEK_SET); // Pular cabeçalho
+        
+        // Pular cabeçalho
+        fseek(arquivoBin, 17, SEEK_SET); 
         
         Registro registro;
-
         int offsetAtual = 17;
+
         while (lerRegistroBin(arquivoBin, &registro) != -1) {
-            if (registro.removido == '1') continue; // Pular registros removidos
+            
+            // Pular registros removidos
+            if (registro.removido == '1') continue; 
 
             offsetAtual += 80;
-            if (compararRegistroComFiltros(&registro, &busca[i])) {
+            if (compararRegistroComFiltros(&registro, &busca[i])) 
                 deletarRegistro(&registro, &cabecalho, arquivoBin, offsetAtual);
-            }
         }
-
-        free(busca[i].campo); // Liberar memória dos filtros da busca atual
+        
+        // Liberar memória dos filtros da busca atual
+        free(busca[i].campo); 
     }
 
     // Recontagem do número de estações e pares.
     utils_contaNroEstacoesNroPares(&cabecalho, arquivoBin, 1);
-
     
-    // ----- Uma vez que as deleções finalizaram, podemos escrever o novo cabeçalho
-    // O arquivo será fechado: status = 1
+    // --- Uma vez que as deleções finalizaram, podemos escrever o novo cabeçalho
+    // O arquivo será fechado como consistente: status = 1
     registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1, 0);
+    
+    // Liberar memória da busca
+    free(busca); 
 
-    free(busca); // Liberar memória da busca
+    // Fechamento do arquivo
     fclose(arquivoBin);
 
     BinarioNaTela(nomeArquivoBin);
 }
 
 // Funcionalidade [5] - Insert
+// [5] Implementação da funcionalidade que insere registros usando remoção lógica
 void insertInto(char *nomeArquivoBin, int nInsercoes) {
 
-    // Lista de registros que 
-    Registro *registros = utils_leRegistros(nInsercoes);
+    // A função abaixo é uma caso específico da função recebeCampos:
+    // Nesse caso, os campos compõem um registro
+    Registro *registros = registro_lerRegistros(nInsercoes);
 
+    // Abertura do arquivo
     FILE *arquivoBin = fopen(nomeArquivoBin, "rb+");
     if(arquivoBin == NULL) {
         printf("Falha no processamento do arquivo.\n");
         return;
     }
 
+    // Cabeçalho será setado para inconsistente
+    // Leitura do cabeçalho
     Cabecalho cabecalho;
     lerCabecalho(&cabecalho, arquivoBin);
     
@@ -281,7 +293,7 @@ void insertInto(char *nomeArquivoBin, int nInsercoes) {
         if (cabecalho.topo != -1) {
 
             //Atualização do topo da pilha
-            fseek(arquivoBin, 17 + cabecalho.topo * 80 + 1, SEEK_SET);
+            fseek(arquivoBin, TAM_CABECALHO + cabecalho.topo * TAM_REGISTRO + 1, SEEK_SET);
             fread(&cabecalho.topo, sizeof(int), 1, arquivoBin);
 
             //Inserção do novo registro
@@ -293,7 +305,7 @@ void insertInto(char *nomeArquivoBin, int nInsercoes) {
         else {
 
             //Inserção do novo registro
-            fseek(arquivoBin, 17 + cabecalho.proxRRN * 80, SEEK_SET);
+            fseek(arquivoBin, TAM_CABECALHO + cabecalho.proxRRN * TAM_REGISTRO, SEEK_SET);
             escreverRegistroBin(arquivoBin, &registros[i]);
             cabecalho.proxRRN++;        
         }
@@ -302,20 +314,27 @@ void insertInto(char *nomeArquivoBin, int nInsercoes) {
     // ---- Atualização dos Pares de Estação
     utils_contaNroEstacoesNroPares(&cabecalho, arquivoBin, 0);
 
+    // - Escrevendo cabecalho e setando como consistente 
     registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1, 0);
     
-
+    // Fechamento do arquivo
     fclose(arquivoBin);
-    //free(registros);
 
     BinarioNaTela(nomeArquivoBin);
 }
 
-// Funcionalidade [5] - Update
+// Funcionalidade [6] - Update
+// [6] Implementação da funcionalidade que atualiza registros
 void update(char* nomeArquivoBin, int nAtualizacoes) {
 
+    // Abertura do arquivo
     FILE *arquivoBin = fopen(nomeArquivoBin, "rb+");
+    if(arquivoBin == NULL) {
+        printf("Falha no processamento do arquivo.\n");
+        return;
+    }
 
+    // Gerenciamento do cabeçalho
     Cabecalho cabecalho;
     fread(&cabecalho.status, sizeof(char), 1, arquivoBin);
     
@@ -323,39 +342,44 @@ void update(char* nomeArquivoBin, int nAtualizacoes) {
     if(!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0, 0))
         return;
 
+    // Recebimento dos campos da busca que compõem (valores atualizados, filtros)
     Busca *busca = (Busca*) malloc(2*nAtualizacoes*sizeof(Busca));
     utils_recebeCampos(busca, 2*nAtualizacoes);
     
-    //Todo busca[i].filtro[j], com j par, representa os valores de atualização da busca i
-    //Todo busca[i].filtro[j], com j ímpar, representa os valores de filtro da busca i
+    //Todo busca[i].campo[j], com j par, representa os valores de atualização da busca i
+    //Todo busca[i].campo[j], com j ímpar, representa os valores de filtro da busca i
 
     for (int i = 0; i < 2*nAtualizacoes; i += 2) {
-
-        fseek(arquivoBin, 17, SEEK_SET); // Pular cabeçalho
+        
+        // Pular cabeçalho
+        fseek(arquivoBin, 17, SEEK_SET); 
         
         Registro registro;
 
         int offsetAtual = 17;
         while (lerRegistroBin(arquivoBin, &registro) != -1) {
             
-            if (registro.removido == '1') continue; // Pular registros removidos
+            // Pular registros removidos
+            if (registro.removido == '1') continue; 
 
             offsetAtual += 80;
             if (compararRegistroComFiltros(&registro, &busca[i])) {
                 utils_atualizarRegistroComFiltros(busca[i+1], arquivoBin, offsetAtual);
             }
         }
-
-        free(busca[i].campo); // Liberar memória dos filtros da busca atual
+        
+        // Liberar memória dos filtros da busca atual
+        free(busca[i].campo); 
     }
 
     // ---- Arquivo será fechado: status consistente
     // Não vamos usar a função "registro_gerenciaCabecalho" aqui, porque ela escreve o cabecalho inteiro
-    // Como só alteramos o status, usar a função com a opção flag = 1 seria overkill
+    // Como só alteramos o status, usar a função com a opção escreveConsistente = 1 seria overkill
     cabecalho.status = '1';
     fseek(arquivoBin, 0, SEEK_SET);
     fwrite(&cabecalho.status, sizeof(char), 1, arquivoBin);
 
+    // Fechamento do Arquivo
     fclose(arquivoBin);
 
     BinarioNaTela(nomeArquivoBin);

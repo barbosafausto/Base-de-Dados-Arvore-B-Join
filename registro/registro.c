@@ -237,13 +237,13 @@ void lerCabecalho(Cabecalho *cabecalho, FILE *arquivoBin) {
     fread(&cabecalho->nroParesEstacao, 4, 1, arquivoBin);
 }
 
-Registro *utils_leRegistros(int nRegistros) {
+Registro *registro_lerRegistros(int nRegistros) {
 
     Registro *registros = (Registro*) malloc(nRegistros * sizeof(Registro));
     for (int i = 0; i < nRegistros; i++) {
 
-        // 100 bytes: comprimento seguro
-        char valor[100];
+        // 100 bytes: comprimento seguro, visto que um registro tem 80 bytes
+        char valor[85];
         int valorInt; 
 
         registros[i].removido = '0';
@@ -263,12 +263,14 @@ Registro *utils_leRegistros(int nRegistros) {
             
         //Inserção dos dados no registro
         if (j == 0)      registros[i].codEstacao = valorInt;
+
         else if (j == 1) {
             
             strcpy(registros[i].nomeEstacao, valor);
             registros[i].tamNomeEstacao = strlen(valor);
         }
         else if (j == 2) registros[i].codLinha = valorInt;
+
         else if (j == 3) {
 
             strcpy(registros[i].nomeLinha, valor);

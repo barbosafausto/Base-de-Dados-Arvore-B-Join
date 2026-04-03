@@ -48,5 +48,5 @@
     void escreverRegistroBin(FILE *arquivo, Registro *registro);
     void imprimirRegistro(Registro *registro);
     void deletarRegistro(Registro *registro, Cabecalho *cabecalho, FILE *arquivoBin, int offsetAtual);
-    Registro *utils_leRegistros(int nRegistros);
+    Registro *registro_lerRegistros(int nRegistros);
 #endif 

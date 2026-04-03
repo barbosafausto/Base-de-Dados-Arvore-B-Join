@@ -161,6 +161,7 @@ void utils_recebeCampos(Busca *busca, int nBuscas) {
 int compararRegistroComFiltros(Registro *registro, Busca *busca) {
 
     for (int i = 0; i < busca->mCampos; i++) {
+
         Campo *campo = &busca->campo[i];
         int atendeCriterio = 0;
 
@@ -186,9 +187,13 @@ int compararRegistroComFiltros(Registro *registro, Busca *busca) {
             int tamValorRegistro;
 
             if (strcmp(campo->nomeCampo, "nomeEstacao") == 0) {
+
                 valorRegistro = registro->nomeEstacao;
                 tamValorRegistro = registro->tamNomeEstacao;
-            } else if (strcmp(campo->nomeCampo, "nomeLinha") == 0) {
+            } 
+            
+            else if (strcmp(campo->nomeCampo, "nomeLinha") == 0) {
+
                 valorRegistro = registro->nomeLinha;
                 tamValorRegistro = registro->tamNomeLinha;
             }
