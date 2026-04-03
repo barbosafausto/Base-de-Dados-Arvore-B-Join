@@ -8,7 +8,6 @@
 
 // Dessa forma, mesmo que o arquivo CSV seja muito grande, a memória usada para armazenar
 // os nomes e pares de estações será relativamente pequena.
-
 int adicionarEstacaoUnica(NodeNome **head, char *nome) {
 
     if(nome == NULL || nome[0] == '\0' || strcmp(nome, "NULO") == 0) return 0;
@@ -35,6 +34,7 @@ int adicionarEstacaoUnica(NodeNome **head, char *nome) {
 
     return 1; // Estação não existe
 }
+
 
 int adicionarParUnico(NodePares **head, int cod1, int cod2) {
 
@@ -67,6 +67,7 @@ int adicionarParUnico(NodePares **head, int cod1, int cod2) {
     return 1; // Par não existe
 }
 
+
 void liberarUtils(NodeNome *headNomes, NodePares *headPares) {
     // Libera lista de nomes
     NodeNome *curNomes = headNomes;
@@ -86,9 +87,8 @@ void liberarUtils(NodeNome *headNomes, NodePares *headPares) {
     }
 }
 
-void utils_contaNroEstacoesNroPares(Cabecalho *cabecalho, FILE *arquivoBin) {
 
-    if (cabecalho == NULL || arquivoBin == NULL) return;
+void utils_contaNroEstacoesNroPares(Cabecalho *cabecalho, FILE *arquivoBin, int Delete) {
 
     //Volta cursor para o início, pós cabeçalho
     fseek(arquivoBin, 17, SEEK_SET);
@@ -104,11 +104,16 @@ void utils_contaNroEstacoesNroPares(Cabecalho *cabecalho, FILE *arquivoBin) {
 
         if (registro->removido == '1') continue;
 
-        if (adicionarEstacaoUnica(&n_head, registro->nomeEstacao))
-            nroEstacoes++;
-    
+        // Atualização dos pares
         if (adicionarParUnico(&p_head, registro->codEstacao, registro->codProxEstacao))
             nroParesEstacao++;
+        
+        // Se não for a funcionalidade "deleteWhere", não precisamos atualizar as estações, apenas os pares.
+        if (!Delete) continue;
+
+        // Atualização das estações (funcionalidade insertInto)
+        if (adicionarEstacaoUnica(&n_head, registro->nomeEstacao))
+            nroEstacoes++;
     }
 
     cabecalho->nroEstacoes = nroEstacoes;
@@ -118,48 +123,85 @@ void utils_contaNroEstacoesNroPares(Cabecalho *cabecalho, FILE *arquivoBin) {
     liberarUtils(n_head, p_head);
 }
 
+
+void utils_recebeCampos(Busca *busca, int nBuscas) {
+
+    for (int i = 0; i < nBuscas; i++) {
+        scanf("%d", &busca[i].mCampos);
+        busca[i].campo = (Campo*) malloc(busca[i].mCampos * sizeof(Campo));
+
+        for (int j = 0; j < busca[i].mCampos; j++) {
+            scanf("%s", busca[i].campo[j].nomeCampo);
+
+            if (strcmp(busca[i].campo[j].nomeCampo, "nomeEstacao") == 0 ||
+                strcmp(busca[i].campo[j].nomeCampo, "nomeLinha") == 0) {
+                // 
+                    // Campo string
+                    ScanQuoteString(busca[i].campo[j].valorString);
+                busca[i].campo[j].isString = 1;
+
+            } 
+            
+            else {
+                // Campo int ou NULO
+                char valor[64];
+                scanf(" %s", valor);
+                if (strcmp(valor, "NULO") == 0) {
+                    busca[i].campo[j].valorInt = -1; // Valor padrão para NULO
+                } else {
+                    busca[i].campo[j].valorInt = atoi(valor);
+                }
+                busca[i].campo[j].isString = 0;
+            }
+        }
+    }
+}
+
+
 int compararRegistroComFiltros(Registro *registro, Busca *busca) {
-    for (int i = 0; i < busca->mFiltros; i++) {
-        Filtro *filtro = &busca->filtro[i];
+
+    for (int i = 0; i < busca->mCampos; i++) {
+        Campo *campo = &busca->campo[i];
         int atendeCriterio = 0;
 
         // Campos inteiros
-        if (filtro->isString == 0) {
+        if (campo->isString == 0) {
             int valorRegistro;
 
-            if      (strcmp(filtro->nomeCampo, "codEstacao") == 0)      valorRegistro = registro->codEstacao;
-            else if (strcmp(filtro->nomeCampo, "codLinha") == 0)        valorRegistro = registro->codLinha;
-            else if (strcmp(filtro->nomeCampo, "codProxEstacao") == 0)  valorRegistro = registro->codProxEstacao;
-            else if (strcmp(filtro->nomeCampo, "distProxEstacao") == 0) valorRegistro = registro->distProxEstacao;
-            else if (strcmp(filtro->nomeCampo, "codLinhaIntegra") == 0) valorRegistro = registro->codLinhaIntegra;
-            else if (strcmp(filtro->nomeCampo, "codEstIntegra") == 0)   valorRegistro = registro->codEstIntegra;
+            if      (strcmp(campo->nomeCampo, "codEstacao") == 0)      valorRegistro = registro->codEstacao;
+            else if (strcmp(campo->nomeCampo, "codLinha") == 0)        valorRegistro = registro->codLinha;
+            else if (strcmp(campo->nomeCampo, "codProxEstacao") == 0)  valorRegistro = registro->codProxEstacao;
+            else if (strcmp(campo->nomeCampo, "distProxEstacao") == 0) valorRegistro = registro->distProxEstacao;
+            else if (strcmp(campo->nomeCampo, "codLinhaIntegra") == 0) valorRegistro = registro->codLinhaIntegra;
+            else if (strcmp(campo->nomeCampo, "codEstIntegra") == 0)   valorRegistro = registro->codEstIntegra;
 
-            if (valorRegistro == filtro->valorInt) {
+            if (valorRegistro == campo->valorInt) {
                 atendeCriterio = 1;
             }
         }
+        
         // Campos string 
-        else if (filtro->isString == 1) {
+        else if (campo->isString == 1) {
             char *valorRegistro;
             int tamValorRegistro;
 
-            if (strcmp(filtro->nomeCampo, "nomeEstacao") == 0) {
+            if (strcmp(campo->nomeCampo, "nomeEstacao") == 0) {
                 valorRegistro = registro->nomeEstacao;
                 tamValorRegistro = registro->tamNomeEstacao;
-            } else if (strcmp(filtro->nomeCampo, "nomeLinha") == 0) {
+            } else if (strcmp(campo->nomeCampo, "nomeLinha") == 0) {
                 valorRegistro = registro->nomeLinha;
                 tamValorRegistro = registro->tamNomeLinha;
             }
 
             // Se filtro for NULO -> tamanho no registro = 0
-            if (strcmp(filtro->valorString, "NULO") == 0) {
+            if (strcmp(campo->valorString, "NULO") == 0) {
                 if (tamValorRegistro == 0) { // Campo é NULO
                     atendeCriterio = 1;
                 }
             } 
             // Comparação normal de strings
             else {
-                if (strcmp(valorRegistro, filtro->valorString) == 0) {
+                if (strcmp(valorRegistro, campo->valorString) == 0) {
                     atendeCriterio = 1;
                 }
             }
@@ -173,39 +215,6 @@ int compararRegistroComFiltros(Registro *registro, Busca *busca) {
 }
 
 
-void recebeFiltros(Busca *busca, int nBuscas) {
-
-    for (int i = 0; i < nBuscas; i++) {
-        scanf("%d", &busca[i].mFiltros);
-        busca[i].filtro = (Filtro *) malloc(busca[i].mFiltros * sizeof(Filtro));
-
-        for (int j = 0; j < busca[i].mFiltros; j++) {
-            scanf("%s", busca[i].filtro[j].nomeCampo);
-
-            if (strcmp(busca[i].filtro[j].nomeCampo, "nomeEstacao") == 0 ||
-                strcmp(busca[i].filtro[j].nomeCampo, "nomeLinha") == 0) {
-                // 
-                    // Campo string
-                    ScanQuoteString(busca[i].filtro[j].valorString);
-                busca[i].filtro[j].isString = 1;
-
-            } 
-            
-            else {
-                // Campo int ou NULO
-                char valor[64];
-                scanf(" %s", valor);
-                if (strcmp(valor, "NULO") == 0) {
-                    busca[i].filtro[j].valorInt = -1; // Valor padrão para NULO
-                } else {
-                    busca[i].filtro[j].valorInt = atoi(valor);
-                }
-                busca[i].filtro[j].isString = 0;
-            }
-        }
-    }
-}
-
 void utils_atualizarRegistroComFiltros(Busca busca, FILE *arquivoBin, int offsetAtual) {
 
     int offsetRegistro = offsetAtual - 80;
@@ -214,25 +223,25 @@ void utils_atualizarRegistroComFiltros(Busca busca, FILE *arquivoBin, int offset
     fseek(arquivoBin, offsetRegistro, SEEK_SET);
     lerRegistroBin(arquivoBin, &registro);
 
-    for (int j = 0; j < busca.mFiltros; j++) {
+    for (int j = 0; j < busca.mCampos; j++) {
 
         //Agora, vamos atualizar o registro
-        if      (strcmp(busca.filtro[j].nomeCampo, "codEstacao") == 0)      registro.codEstacao = busca.filtro[j].valorInt;
-        else if (strcmp(busca.filtro[j].nomeCampo, "codLinha") == 0)        registro.codLinha = busca.filtro[j].valorInt;
-        else if (strcmp(busca.filtro[j].nomeCampo, "codProxEstacao") == 0)  registro.codProxEstacao = busca.filtro[j].valorInt;
-        else if (strcmp(busca.filtro[j].nomeCampo, "distProxEstacao") == 0) registro.distProxEstacao = busca.filtro[j].valorInt; 
-        else if (strcmp(busca.filtro[j].nomeCampo, "codLinhaIntegra") == 0) registro.codLinhaIntegra = busca.filtro[j].valorInt;
-        else if (strcmp(busca.filtro[j].nomeCampo, "codEstIntegra") == 0)   registro.codEstIntegra = busca.filtro[j].valorInt;
+        if      (strcmp(busca.campo[j].nomeCampo, "codEstacao") == 0)      registro.codEstacao = busca.campo[j].valorInt;
+        else if (strcmp(busca.campo[j].nomeCampo, "codLinha") == 0)        registro.codLinha = busca.campo[j].valorInt;
+        else if (strcmp(busca.campo[j].nomeCampo, "codProxEstacao") == 0)  registro.codProxEstacao = busca.campo[j].valorInt;
+        else if (strcmp(busca.campo[j].nomeCampo, "distProxEstacao") == 0) registro.distProxEstacao = busca.campo[j].valorInt; 
+        else if (strcmp(busca.campo[j].nomeCampo, "codLinhaIntegra") == 0) registro.codLinhaIntegra = busca.campo[j].valorInt;
+        else if (strcmp(busca.campo[j].nomeCampo, "codEstIntegra") == 0)   registro.codEstIntegra = busca.campo[j].valorInt;
         
-        else if      (strcmp(busca.filtro[j].nomeCampo, "nomeLinha") == 0) {
+        else if      (strcmp(busca.campo[j].nomeCampo, "nomeLinha") == 0) {
 
-            strcpy(registro.nomeEstacao, busca.filtro[j].valorString);           
+            strcpy(registro.nomeEstacao, busca.campo[j].valorString);           
             registro.tamNomeEstacao = strlen(registro.nomeEstacao);
         }
 
-        else if (strcmp(busca.filtro[j].nomeCampo, "codLinha") == 0) {
+        else if (strcmp(busca.campo[j].nomeCampo, "codLinha") == 0) {
             
-            strcpy(registro.nomeLinha, busca.filtro[j].valorString);           
+            strcpy(registro.nomeLinha, busca.campo[j].valorString);           
             registro.tamNomeLinha = strlen(registro.nomeLinha);
 
         }
@@ -242,6 +251,6 @@ void utils_atualizarRegistroComFiltros(Busca busca, FILE *arquivoBin, int offset
     fseek(arquivoBin, offsetRegistro, SEEK_SET);
     escreverRegistroBin(arquivoBin, &registro);
 
-    //Restaurando a posição para não corromper o loop
-    fseek(arquivoBin, offsetAtual, SEEK_SET);
+    //Não precisa dar fseek porque a última escrita posicionou a leitora na posição correta
+    //fseek(arquivoBin, offsetAtual, SEEK_SET);
 }

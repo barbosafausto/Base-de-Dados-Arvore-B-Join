@@ -36,8 +36,10 @@
         char nomeLinha[64];     // 64 bytes - valor para dar uma boa margem de segurança.
     } Registro;
 
+    void registro_processaCSV(Registro *registro, char *pLinha);
+
     void initCabecalho(Cabecalho *cabecalho);
-    int registro_gerenciaCabecalho(Cabecalho *cabecalho, FILE *arquivoBin, int flag);
+    int registro_gerenciaCabecalho(Cabecalho *cabecalho, FILE *arquivoBin, int escreveConsistente, int leitura);
 
     void lerCabecalho(Cabecalho *cabecalho, FILE *arquivoBin);
     void escreverCabecalhoBin(FILE *arquivo, Cabecalho *cabecalho);

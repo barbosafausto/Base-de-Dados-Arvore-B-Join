@@ -4,22 +4,22 @@
     #include "../registro/registro.h"
     #include "../fornecidas/fornecidas.h"
 
-    //     Structs para auxiliar na funcionalidade createTable
-    // nomeEstacao (para nroEstacoes)
+    // --- Structs para auxiliar contagem de estações e pares
+    // nomeEstacao (nroEstacoes)
     typedef struct nodeNome {
         char *nome;
         struct nodeNome *prox;
-    }NodeNome;
+    } NodeNome;
 
     // paresEstacao (nroParesEstacao)
     typedef struct nodePares {
         int cod1;
         int cod2;
         struct nodePares *prox;
-    }NodePares;
+    } NodePares;
 
 
-    //      Structs para auxiliar na funcionalidade de busca com filtros
+    // --- Structs para auxiliar na funcionalidade de busca com campos
     // Campos valorString e valorInt para diferenciar entre leitura com aspas ("") e leitura de NULO ou números.
     // isString serve pra facilitar na hora da comparação.
     typedef struct {
@@ -27,23 +27,36 @@
         char valorString[64];
         int valorInt;
         int isString; // 1 - String, 0 - Int ou NULO
-    } Filtro;
+    } Campo;
 
-    // Struct para ajudar na leitura de todos os n filtros.
+    // Struct para ajudar na leitura de todas as n buscas, seja seleção, remoção ou atualização.
     typedef struct {
-        int mFiltros;
-        Filtro *filtro;
+        int mCampos;
+        Campo *campo;
     } Busca;
 
 
-    int adicionarEstacaoUnica(NodeNome **head, char *nome);
-    int adicionarParUnico(NodePares **head, int cod1, int cod2);
-    void utils_contaNroEstacoesNroPares(Cabecalho *cabecalho, FILE *arquivoBin);
+    //  --- Funções auxiliares
 
+    // Incrementa nroEstacoes se a atual for única
+    int adicionarEstacaoUnica(NodeNome **head, char *nome);
+
+    // Incrementa o nroParesEstacoes se o códigos atuais forem únicos e não-nulos
+    int adicionarParUnico(NodePares **head, int cod1, int cod2);
+
+    // Percorre o arquivo nas função Insert e Delete para atualizar o nroEstacoes e nroParesEstacoes
+    void utils_contaNroEstacoesNroPares(Cabecalho *cabecalho, FILE *arquivoBin, int Delete);
+
+    // Liberação da memória alocada para contar as estações e os pares 
     void liberarUtils(NodeNome *headNomes, NodePares *headPares);
 
-    void recebeFiltros(Busca *busca, int nBuscas);
+    // Função extremamente útil: recebe campos tratando strings e valores nulos
+    void utils_recebeCampos(Busca *busca, int nBuscas);
+
+    // Função extremamente útil 2: comparar registros com filtros
     int compararRegistroComFiltros(Registro *registro, Busca *busca);
+
+    // Atualiza registro com base nos filtros da funcionalidade "update"
     void utils_atualizarRegistroComFiltros(Busca busca, FILE *arquivoBin, int offsetAtual);
 
 #endif

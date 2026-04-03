@@ -5,10 +5,13 @@
 #include <string.h>
 
 // Funcionalidade [1] - Create Table
+// [1] Implementação da funcionalidade de criação da tabela binária a partir do CSV
 void createTable(char *nomeArquivoCSV, char *nomeArquivoBin) {
-    // Implementação da funcionalidade de criação da tabela a partir do CSV [1]
 
-    // Abrir arquivos
+    
+    // --- Abrir arquivos
+
+
     FILE *arquivoCSV = fopen(nomeArquivoCSV, "r");
     if(arquivoCSV == NULL) {
         printf("Falha no processamento do arquivo.\n");
@@ -22,181 +25,156 @@ void createTable(char *nomeArquivoCSV, char *nomeArquivoBin) {
     }
 
 
-    // Inicializar o cabeçalho como inconsistente
+    // --- Inicializar o cabeçalho como inconsistente
+
+    
+    // cabecalho->status = '0': status será definido como '0' na função initCabecalho 
     Cabecalho cabecalho;
     initCabecalho(&cabecalho);
-    //cabecalho->status = '0';   // Já é definido como '0' na função initCabecalho
-
-    // Escrever o cabeçalho no arquivo binário (17 bytes)
+    
+    // Cabeçalho será escrita em arquivo
     escreverCabecalhoBin(arquivoBin, &cabecalho);
 
     
-    // Processamento das linhas do CSV
-    char linha[1024];
+    // --- Processamento das linhas do CSV
+
+
+    char linha[200];
+    
+    // Registros (linhas)
     Registro registro;
+
+    // Lista para armazenar estações já vistas
+    NodeNome *listaNomes = NULL; 
     
-    NodeNome *listaNomes = NULL; // Lista para armazenar estações já vistas
-    NodePares *listaPares = NULL; // Lista para armazenar pares de estações já vistos
+    // Lista para armazenar pares de estações já vistos
+    NodePares *listaPares = NULL; 
+
     
-    
-    fgets(linha, sizeof(linha), arquivoCSV); // Pular a linha de cabeçalho do CSV
+    // Pular a linha de cabeçalho do CSV
+    fgets(linha, sizeof(linha), arquivoCSV); 
+
+    // --- Loop até o final do arquivo CSV (NULL)
     while(fgets(linha, sizeof(linha), arquivoCSV) != NULL) {
+        
+        // Linha vazia (precaução)
+        if(linha[0] == '\n' || linha[0] == '\r' || linha[0] == '\0') continue; 
 
-        if(linha[0] == '\n' || linha[0] == '\r' || linha[0] == '\0') continue; // Linha vazia
-        // memset(&registro, 0, sizeof(Registro));
+        // Remover o caractere de nova linha
+        linha[strcspn(linha, "\r\n")] = '\0'; 
 
-        linha[strcspn(linha, "\r\n")] = '\0'; // Remover o caractere de nova linha
-
-        char *pLinha = linha;
-        char *token;
-
-        registro.removido = '0'; // Registro válido
-        registro.proximo = -1;   // Não há próximo registro removido
-
-        // codEstacao
-        token = strsep(&pLinha, ",");
-        registro.codEstacao = atoi(token);
-
-        // nomeEstacao
-        token = strsep(&pLinha, ",");
-        registro.tamNomeEstacao = strlen(token);
-        strcpy(registro.nomeEstacao, token);
-
-        // codLinha - int
-        token = strsep(&pLinha, ",");
-        if(token[0] == '\0') {
-            registro.codLinha = -1; // Valor padrão para campo ausente
-        } else {
-            registro.codLinha = atoi(token);
-        }
-
-        // nomeLinha - string
-        token = strsep(&pLinha, ",");
-        if(token[0] == '\0') {
-            registro.tamNomeLinha = 0; // Campo ausente
-        } else {
-            registro.tamNomeLinha = strlen(token);
-            strcpy(registro.nomeLinha, token);
-        }
-
-        // Usando operador ternário p melhorar visualização
-        // Fazem a mesma coisa que o bloco if-else do codLinha
-
-        // codProxEstacao (int)
-        token = strsep(&pLinha, ",");
-        registro.codProxEstacao = (token[0] == '\0') ? -1 : atoi(token);
-
-        // distProxEstacao (int)
-        token = strsep(&pLinha, ",");
-        registro.distProxEstacao = (token[0] == '\0') ? -1 : atoi(token);
-
-        // codLinhaIntegra (int)
-        token = strsep(&pLinha, ",");
-        registro.codLinhaIntegra = (token[0] == '\0') ? -1 : atoi(token);
-
-        // codEstIntegra (int)
-        token = strsep(&pLinha, ",");
-        registro.codEstIntegra = (token[0] == '\0') ? -1 : atoi(token);
-
+        // Processamento dos campos via strsep
+        registro_processaCSV(&registro, linha);
 
         // Escrever o registro no arquivo binário
         escreverRegistroBin(arquivoBin, &registro);
 
+        // Contagem de Estações
         if(registro.tamNomeEstacao > 0) {
             if(adicionarEstacaoUnica(&listaNomes, registro.nomeEstacao)) 
                 cabecalho.nroEstacoes++;
         }
 
+        // Contagem de Pares
         if(registro.codProxEstacao != -1) {
             if(adicionarParUnico(&listaPares, registro.codEstacao, registro.codProxEstacao))
                 cabecalho.nroParesEstacao++;
         }
         
-        cabecalho.proxRRN++; // Incrementar o próximo RRN disponível
-
+        // Incrementar o próximo RRN disponível
+        cabecalho.proxRRN++; 
     }
 
     //Atualizamos a consistência para '1' e escrevemos o cabeçalho
-    registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1);
+    registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1, 0);
+
 
     fclose(arquivoCSV);
     fclose(arquivoBin);
+    
+    // Liberar memória das listas (contagem de estações e pares)
+    liberarUtils(listaNomes, listaPares); 
 
-    liberarUtils(listaNomes, listaPares); // Liberar memória das listas
     BinarioNaTela(nomeArquivoBin);
 }
 
-// Funcionalidade [2] - Select
+// --- Funcionalidade [2] - Select
+// [2] Implementação da funcionalidade que seleciona os registros do arquivo
 void selectFromTable(char *nomeArquivoBin) {
-    // Implementação da funcionalidade Select [2]
 
+    // Abertura do Binário
     FILE *arquivoBin = fopen(nomeArquivoBin, "rb");
-    if(arquivoBin == NULL) {
+    if (arquivoBin == NULL) {
         printf("Falha no processamento do arquivo.\n");
         return;
     }
 
-    char status;
-    fread(&status, sizeof(char), 1, arquivoBin);
-
-    if(status == '0') { // inconsistente
-        printf("Falha no processamento do arquivo.\n");
-        fclose(arquivoBin);
+    // --- Verificação de consistência
+    Cabecalho cabecalho; 
+    fread(&cabecalho.status, sizeof(char), 1, arquivoBin);
+    if (!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0, 1))
         return;
-    }
+    
+    // --- Pular cabeçalho
+    fseek(arquivoBin, 17, SEEK_SET); 
 
-    fseek(arquivoBin, 17, SEEK_SET); // Pular cabeçalho
-
+    // --- Leitura e impressão dos registros
     Registro registro;
     int statusLeitura;
     int existeRegistro = 0;
 
-    while((statusLeitura = lerRegistroBin(arquivoBin, &registro)) != -1) {
-        if(statusLeitura == 1) {
+    // Loop Leitura
+    while ((statusLeitura = lerRegistroBin(arquivoBin, &registro)) != -1) {
+        if (statusLeitura == 1) {
             imprimirRegistro(&registro);
             existeRegistro = 1;
         }
     }
 
-    if(!existeRegistro) {
+    // Caso de não-existência do registro
+    if (!existeRegistro) {
         printf("Registro inexistente.\n");
     }
 
+    // Fechamento do arquivo
     fclose(arquivoBin);
 }
 
 // Funcionalidade [3] - Where
+// [3] Implementação da funcionalidade Select com Filtros 
 void selectWhere(char *nomeArquivoBin, int nBuscas) {
-    // Implementação da funcionalidade Select Where [3]
 
-    // Leitura dos filtros
+    // Leitura dos campos que compõem os filtros da busca
     Busca *busca = (Busca *) malloc(nBuscas * sizeof(Busca));
-    recebeFiltros(busca, nBuscas);
+    utils_recebeCampos(busca, nBuscas);
 
-    // Processamento das buscas
+    // Abertura do arquivo
     FILE *arquivoBin = fopen(nomeArquivoBin, "rb");
     if(arquivoBin == NULL) {
         printf("Falha no processamento do arquivo.\n");
         return;
     }
 
-    char status;
-    fread(&status, sizeof(char), 1, arquivoBin);
-
-    if(status == '0') { // inconsistente
-        printf("Falha no processamento do arquivo.\n");
-        fclose(arquivoBin);
+    // Verificação de consistência
+    Cabecalho cabecalho; 
+    fread(&cabecalho.status, sizeof(char), 1, arquivoBin);
+    if (!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0, 1))
         return;
-    }
 
+    // Processamento das Buscas
     for (int i = 0; i < nBuscas; i++) {
-        fseek(arquivoBin, 17, SEEK_SET); // Pular cabeçalho
+        
+        // Pular cabeçalho
+        fseek(arquivoBin, 17, SEEK_SET); 
         
         Registro registro;
         int encontrouRegistro = 0;
 
+        // Leitura até EOF
         while (lerRegistroBin(arquivoBin, &registro) != -1) {
-            if (registro.removido == '1') continue; // Pular registros removidos
+            
+            // Pular registros removidos
+            if (registro.removido == '1') continue; 
 
             if (compararRegistroComFiltros(&registro, &busca[i])) {
                 imprimirRegistro(&registro);
@@ -204,18 +182,20 @@ void selectWhere(char *nomeArquivoBin, int nBuscas) {
             }
         }
 
-        if (!encontrouRegistro) {
-            printf("Registro inexistente.");
-            printf("\n");   // Quebra de linha para alinhar com o runcodes 
-        }
+        if (!encontrouRegistro) 
+            printf("Registro inexistente.\n");
 
         // Formatação da saída
         printf("\n");
-
-        free(busca[i].filtro); // Liberar memória dos filtros da busca atual
+        
+        // Liberar memória dos filtros da busca atual
+        free(busca[i].campo); 
     }
+    
+    // Liberar memória do vetor de buscas
+    free(busca); 
 
-    free(busca); // Liberar memória da busca
+    // Fechamento do arquivo
     fclose(arquivoBin);
 }
 
@@ -228,7 +208,7 @@ void deleteWhere(char *nomeArquivoBin, int nRemocoes) {
     //Vetor que vai guardar os filtros da busca
     Busca *busca = (Busca*) malloc(nRemocoes * sizeof(Busca));
 
-    recebeFiltros(busca, nRemocoes);
+    utils_recebeCampos(busca, nRemocoes);
 
     // Processamento das deleções
     FILE *arquivoBin = fopen(nomeArquivoBin, "rb+");
@@ -241,7 +221,7 @@ void deleteWhere(char *nomeArquivoBin, int nRemocoes) {
     lerCabecalho(&cabecalho, arquivoBin);
     
     // Verificando consistência do arquivo
-    if (registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0))
+    if (registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0, 0))
         return;
     
     for (int i = 0; i < nRemocoes; i++) {
@@ -259,16 +239,16 @@ void deleteWhere(char *nomeArquivoBin, int nRemocoes) {
             }
         }
 
-        free(busca[i].filtro); // Liberar memória dos filtros da busca atual
+        free(busca[i].campo); // Liberar memória dos filtros da busca atual
     }
 
     // Recontagem do número de estações e pares.
-    utils_contaNroEstacoesNroPares(&cabecalho, arquivoBin);
+    utils_contaNroEstacoesNroPares(&cabecalho, arquivoBin, 1);
 
     
     // ----- Uma vez que as deleções finalizaram, podemos escrever o novo cabeçalho
     // O arquivo será fechado: status = 1
-    registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1);
+    registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1, 0);
 
     free(busca); // Liberar memória da busca
     fclose(arquivoBin);
@@ -292,7 +272,7 @@ void insertInto(char *nomeArquivoBin, int nInsercoes) {
     lerCabecalho(&cabecalho, arquivoBin);
     
     // Verificando consistência do arquivo
-    if(!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0))
+    if(!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0, 0))
         return;
 
     for (int i = 0; i < nInsercoes; i++) {
@@ -320,9 +300,9 @@ void insertInto(char *nomeArquivoBin, int nInsercoes) {
     }
 
     // ---- Atualização dos Pares de Estação
-    utils_contaNroEstacoesNroPares(&cabecalho, arquivoBin);
+    utils_contaNroEstacoesNroPares(&cabecalho, arquivoBin, 0);
 
-    registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1);
+    registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1, 0);
     
 
     fclose(arquivoBin);
@@ -340,11 +320,11 @@ void update(char* nomeArquivoBin, int nAtualizacoes) {
     fread(&cabecalho.status, sizeof(char), 1, arquivoBin);
     
     // Verificando consistência do arquivo
-    if(!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0))
+    if(!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0, 0))
         return;
 
     Busca *busca = (Busca*) malloc(2*nAtualizacoes*sizeof(Busca));
-    recebeFiltros(busca, 2*nAtualizacoes);
+    utils_recebeCampos(busca, 2*nAtualizacoes);
     
     //Todo busca[i].filtro[j], com j par, representa os valores de atualização da busca i
     //Todo busca[i].filtro[j], com j ímpar, representa os valores de filtro da busca i
@@ -366,7 +346,7 @@ void update(char* nomeArquivoBin, int nAtualizacoes) {
             }
         }
 
-        free(busca[i].filtro); // Liberar memória dos filtros da busca atual
+        free(busca[i].campo); // Liberar memória dos filtros da busca atual
     }
 
     // ---- Arquivo será fechado: status consistente

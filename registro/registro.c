@@ -1,5 +1,58 @@
 #include "registro.h"
 
+// --- Processa um registro do arquivo .csv 
+void registro_processaCSV(Registro *registro, char linha[]) {
+
+        // Ponteiro de char que será processado via strsep
+        char* pLinha = linha;
+
+        // Token de cada processamento
+        char* token;
+
+        // Registro válido
+        registro->removido = '0'; 
+
+        // Registro não-removido: não aponta para ninguém na pilha de remoção
+        registro->proximo = -1;   
+
+        // codEstacao
+        token = strsep(&pLinha, ",");
+        registro->codEstacao = atoi(token);
+
+        // nomeEstacao
+        token = strsep(&pLinha, ",");
+        registro->tamNomeEstacao = strlen(token);
+        strcpy(registro->nomeEstacao, token);
+
+        // codLinha (Nulo ou Int)
+        token = strsep(&pLinha, ",");
+        registro->codLinha = (token[0] == '\0') ? -1 : atoi(token);
+
+        // nomeLinha (Nulo ou String)
+        token = strsep(&pLinha, ",");
+        if (token[0] == '\0') registro->tamNomeLinha = 0; 
+        else {
+            registro->tamNomeLinha = strlen(token);
+            strcpy(registro->nomeLinha, token);
+        }
+
+        // codProxEstacao (int)
+        token = strsep(&pLinha, ",");
+        registro->codProxEstacao = (token[0] == '\0') ? -1 : atoi(token);
+
+        // distProxEstacao (int)
+        token = strsep(&pLinha, ",");
+        registro->distProxEstacao = (token[0] == '\0') ? -1 : atoi(token);
+
+        // codLinhaIntegra (int)
+        token = strsep(&pLinha, ",");
+        registro->codLinhaIntegra = (token[0] == '\0') ? -1 : atoi(token);
+
+        // codEstIntegra (int)
+        token = strsep(&pLinha, ",");
+        registro->codEstIntegra = (token[0] == '\0') ? -1 : atoi(token);
+}
+
 void initCabecalho(Cabecalho *cabecalho) {
     cabecalho->status = '0';            // Inconsistente
     cabecalho->topo = -1;               // Nenhum registro removido (Pilha vazia)
@@ -8,13 +61,14 @@ void initCabecalho(Cabecalho *cabecalho) {
     cabecalho->nroParesEstacao = 0;     // Nenhum par de estações armazenado
 }
 
-int registro_gerenciaCabecalho(Cabecalho *cabecalho, FILE *arquivoBin, int flag) {
+int registro_gerenciaCabecalho(Cabecalho *cabecalho, FILE *arquivoBin, int escreverConsistente, int leitura) {
     
-    //A flag indica a operação:
-    //  flag = 0: verificar se está inconsistente
-    //  flag = 1: setar o arquivo para consistente e escrever cabecalho
+    //A flag "leitura" indica a operação:
+    //  escreverConsistente = 1:               setar o arquivo para consistente e escrever cabecalho
+    //  escreverConsistente = 0 e leitura = 1: apenas verificar se está inconsistente, pois o arquivo foi aberto para leitura
+    //  escreverConsistente = 0 e leitura = 0: setar o arquivo para inconsistente no disco, pois o arquivo foi aberto para escrita
     
-    if (flag == 0) {
+    if (escreverConsistente == 0) {
 
         if (cabecalho->status == '0') { 
 
@@ -22,11 +76,15 @@ int registro_gerenciaCabecalho(Cabecalho *cabecalho, FILE *arquivoBin, int flag)
             fclose(arquivoBin);
             return 0;
         }
-        
-        // O arquivo foi aberto para leitura: status deve ser 0, conforme a especificação.
-        cabecalho->status = '0';
-        fseek(arquivoBin, 0, SEEK_SET);
-        fwrite(&cabecalho->status, sizeof(char), 1, arquivoBin); 
+
+        // Só vamos escrever em disco se o arquivo não foi aberto em modo de leitura
+        if (leitura == 0) {
+
+            // O arquivo foi aberto para escrita: status deve ser 0, conforme a especificação.
+            cabecalho->status = '0';
+            fseek(arquivoBin, 0, SEEK_SET);
+            fwrite(&cabecalho->status, sizeof(char), 1, arquivoBin); 
+        }
     }
 
     else {
@@ -40,6 +98,7 @@ int registro_gerenciaCabecalho(Cabecalho *cabecalho, FILE *arquivoBin, int flag)
 }
 
 void escreverCabecalhoBin(FILE *arquivo, Cabecalho *cabecalho) {
+    
     // Escrever o cabeçalho no arquivo binário (17 bytes)
     fwrite(&cabecalho->status,          1, 1, arquivo);
     fwrite(&cabecalho->topo,            4, 1, arquivo);
@@ -51,6 +110,7 @@ void escreverCabecalhoBin(FILE *arquivo, Cabecalho *cabecalho) {
 }
 
 int lerRegistroBin(FILE *arquivo, Registro *registro) {
+    
     // Fim do arquivo
     if(fread(&registro->removido, sizeof(char), 1, arquivo) != 1) 
         return -1;
@@ -97,6 +157,7 @@ int lerRegistroBin(FILE *arquivo, Registro *registro) {
 }
 
 void escreverRegistroBin(FILE *arquivo, Registro *registro) {
+    
     // Escrever campos fixos do registro
     fwrite(&registro->removido,        sizeof(char), 1, arquivo);
     fwrite(&registro->proximo,         sizeof(int), 1, arquivo);
@@ -128,6 +189,7 @@ void escreverRegistroBin(FILE *arquivo, Registro *registro) {
 }
 
 void imprimirRegistro(Registro *registro) {
+    
     // Nunca serão NULO
     printf("%d ", registro->codEstacao);
     printf("%s ", registro->nomeEstacao);
