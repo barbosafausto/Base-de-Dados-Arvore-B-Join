@@ -150,7 +150,7 @@ void utils_recebeCampos(Busca *busca, int nBuscas) {
             // Campo int ou NULO
             else {
                 
-                char valor[64];
+                char valor[85];
                 scanf(" %s", valor);
 
                 busca[i].campo[j].valorInt = (strcmp(valor, "NULO") == 0) ? -1 : atoi(valor);

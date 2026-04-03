@@ -146,26 +146,27 @@ int registro_lerRegistroBin(FILE *arquivo, Registro *registro) {
 
     // Ler os campos variáveis do registro
     fread(&registro->tamNomeEstacao, sizeof(int), 1, arquivo);
-    if(registro->tamNomeEstacao > 0) {
+    if (registro->tamNomeEstacao > 0) {
+
         fread(registro->nomeEstacao, sizeof(char), registro->tamNomeEstacao, arquivo);
         registro->nomeEstacao[registro->tamNomeEstacao] = '\0'; // Fim da string
-    } else {
+    } 
+    
+    else 
         registro->nomeEstacao[0] = '\0'; // Nome vazio
-    }
 
     fread(&registro->tamNomeLinha, sizeof(int), 1, arquivo);
-    if(registro->tamNomeLinha > 0) {
+    if (registro->tamNomeLinha > 0) {
         fread(registro->nomeLinha, sizeof(char), registro->tamNomeLinha, arquivo);
         registro->nomeLinha[registro->tamNomeLinha] = '\0'; // Fim da string
-    } else {
+    } 
+    else 
         registro->nomeLinha[0] = '\0'; // Nome vazio
-    }
 
     // Pular lixo
     int bytesLidos = 37 + registro->tamNomeEstacao + registro->tamNomeLinha;
-    if(bytesLidos < TAM_REGISTRO) {
+    if(bytesLidos < TAM_REGISTRO) 
         fseek(arquivo, TAM_REGISTRO - bytesLidos, SEEK_CUR);
-    }
 
     return 1; // Sucesso
 }
@@ -185,20 +186,18 @@ void registro_escreverRegistroBin(FILE *arquivo, Registro *registro) {
 
     // Escrever campos variáveis do registro
     fwrite(&registro->tamNomeEstacao, sizeof(int), 1, arquivo);
-    if(registro->tamNomeEstacao > 0) {
+    if(registro->tamNomeEstacao > 0) 
         fwrite(registro->nomeEstacao, sizeof(char), registro->tamNomeEstacao, arquivo);
-    }
 
     fwrite(&registro->tamNomeLinha, sizeof(int), 1, arquivo);
-    if(registro->tamNomeLinha > 0) {
+    if(registro->tamNomeLinha > 0) 
         fwrite(registro->nomeLinha, sizeof(char), registro->tamNomeLinha, arquivo);
-    }
 
     // Preencher o restante do registro com lixo
     int bytesEscritos = 37 + registro->tamNomeEstacao + registro->tamNomeLinha;
     while(bytesEscritos < TAM_REGISTRO) {
-        // fwrite(&lixo, sizeof(char), 1, arquivo);
-        fputc('$', arquivo);
+
+        fputc(LIXO, arquivo);
         bytesEscritos++;
     }
 }
@@ -218,7 +217,6 @@ void registro_imprimirRegistro(Registro *registro) {
     (registro->codLinhaIntegra == -1)   ? printf("NULO ")  : printf("%d ",  registro->codLinhaIntegra);
     (registro->codEstIntegra == -1)     ? printf("NULO\n") : printf("%d\n", registro->codEstIntegra);
 
-    return;
 }
 
 
