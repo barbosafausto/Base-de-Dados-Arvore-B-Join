@@ -2,9 +2,9 @@
 
     #define FUNCIONALIDADES_H
 
-    #include "registro/registro.h"
-    #include "utils/utils.h"
-    #include "fornecidas/fornecidas.h"
+    #include "../registro/registro.h"
+    #include "../utils/utils.h"
+    #include "../fornecidas/fornecidas.h"
 
     void createTable(char *nomeArquivoCSV, char *nomeArquivoBin);
     void selectFromTable(char *nomeArquivoBin);
