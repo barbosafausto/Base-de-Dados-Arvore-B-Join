@@ -38,5 +38,5 @@ verifica:
 	$(CC) $(CFLAGS) $(SRC) -o $(EXECUTAVEL)
 
 leaks:
-	valgrind --leak-checks=full ./EXECUTAVEL
+	valgrind --leak-check=full ./$(EXECUTAVEL)
 

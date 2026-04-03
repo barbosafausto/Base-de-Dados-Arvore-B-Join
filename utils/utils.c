@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "registro.h"
 
 // Usando listas encadeadas para armazenar estações e pares de estações já vistos,
 // para evitar que os valores estejam duplicados.

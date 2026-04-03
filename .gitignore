@@ -12,7 +12,7 @@ programaTrab
 Thumbs.db
 
 # Compactação
-.zip
+*.zip
 
 # Arquivos de Texto
 *.txt

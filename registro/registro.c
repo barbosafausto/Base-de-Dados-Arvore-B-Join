@@ -8,6 +8,37 @@ void initCabecalho(Cabecalho *cabecalho) {
     cabecalho->nroParesEstacao = 0;     // Nenhum par de estações armazenado
 }
 
+int registro_gerenciaCabecalho(Cabecalho *cabecalho, FILE *arquivoBin, int flag) {
+    
+    //A flag indica a operação:
+    //  flag = 0: verificar se está inconsistente
+    //  flag = 1: setar o arquivo para consistente e escrever cabecalho
+    
+    if (flag == 0) {
+
+        if (cabecalho->status == '0') { 
+
+            printf("Falha no processamento do arquivo.\n");
+            fclose(arquivoBin);
+            return 0;
+        }
+        
+        // O arquivo foi aberto para leitura: status deve ser 0, conforme a especificação.
+        cabecalho->status = '0';
+        fseek(arquivoBin, 0, SEEK_SET);
+        fwrite(&cabecalho->status, sizeof(char), 1, arquivoBin); 
+    }
+
+    else {
+
+        cabecalho->status = '1'; 
+        fseek(arquivoBin, 0, SEEK_SET);
+        escreverCabecalhoBin(arquivoBin, cabecalho);
+    }
+
+    return 1;
+}
+
 void escreverCabecalhoBin(FILE *arquivo, Cabecalho *cabecalho) {
     // Escrever o cabeçalho no arquivo binário (17 bytes)
     fwrite(&cabecalho->status,          1, 1, arquivo);

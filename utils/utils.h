@@ -1,8 +1,8 @@
 #ifndef UTILS_H
     #define UTILS_H
 
-    #include "registro.h"
-    #include "fornecidas.h"
+    #include "../registro/registro.h"
+    #include "../fornecidas/fornecidas.h"
 
     //     Structs para auxiliar na funcionalidade createTable
     // nomeEstacao (para nroEstacoes)

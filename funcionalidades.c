@@ -1,7 +1,4 @@
 #include "funcionalidades.h"
-#include "registro.h"
-#include "utils.h"
-#include "fornecidas.h" // Dos monitores
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -119,13 +116,8 @@ void createTable(char *nomeArquivoCSV, char *nomeArquivoBin) {
 
     }
 
-    // Finalizar Create Table
-    cabecalho.status = '1'; // Tabela consistente, conforme especificação
-    // debbug
-    //printf("Status: %c, Topo: %d, ProxRRN: %d, nroEstacoes: %d, nroParesEstacao: %d\n", cabecalho.status, cabecalho.topo, cabecalho.proxRRN, cabecalho.nroEstacoes, cabecalho.nroParesEstacao);
-
-    fseek(arquivoBin, 0, SEEK_SET); // Voltar para o início do arquivo para atualizar o cabeçalho
-    escreverCabecalhoBin(arquivoBin, &cabecalho); // Atualizar o cabeçalho com os valores finais
+    //Atualizamos a consistência para '1' e escrevemos o cabeçalho
+    registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1);
 
     fclose(arquivoCSV);
     fclose(arquivoBin);
@@ -227,6 +219,9 @@ void selectWhere(char *nomeArquivoBin, int nBuscas) {
     fclose(arquivoBin);
 }
 
+
+
+
 // Funcionalidade [4] - Delete
 void deleteWhere(char *nomeArquivoBin, int nRemocoes) {
 
@@ -244,22 +239,11 @@ void deleteWhere(char *nomeArquivoBin, int nRemocoes) {
 
     Cabecalho cabecalho;
     lerCabecalho(&cabecalho, arquivoBin);
-
-    //printf("Status lido: '%c' | Topo: %d | RRN: %d | Estacoes: %d\n", 
-    //   cabecalho.status, cabecalho.topo, cabecalho.proxRRN, cabecalho.nroEstacoes); 
-
-
-    // Verificando consistência do arquivo
-    if(cabecalho.status == '0') { // inconsistente
-        printf("Falha no processamento do arquivo.\n");
-        fclose(arquivoBin);
-        return;
-    }
-
-    // O arquivo foi aberto para leitura: status deve ser 0
-    cabecalho.status = '0';
     
-
+    // Verificando consistência do arquivo
+    if (registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0))
+        return;
+    
     for (int i = 0; i < nRemocoes; i++) {
         fseek(arquivoBin, 17, SEEK_SET); // Pular cabeçalho
         
@@ -278,17 +262,13 @@ void deleteWhere(char *nomeArquivoBin, int nRemocoes) {
         free(busca[i].filtro); // Liberar memória dos filtros da busca atual
     }
 
-    // Agora, é necessário recontar o número de estações para ver se ainda temos o mesmo número ou não
+    // Recontagem do número de estações e pares.
     utils_contaNroEstacoesNroPares(&cabecalho, arquivoBin);
 
-    // Uma vez que as deleções finalizaram, podemos escrever o novo cabeçalho
-    cabecalho.status = '1'; // O arquivo será fechado: status = 1;
-
-    //printf("Status lido: '%c' | Topo: %d | RRN: %d | Estacoes: %d\n | Pares: %d\n", 
-    //   cabecalho.status, cabecalho.topo, cabecalho.proxRRN, cabecalho.nroEstacoes, cabecalho.nroParesEstacao); 
-   
-    fseek(arquivoBin, 0, SEEK_SET);
-    escreverCabecalhoBin(arquivoBin, &cabecalho);
+    
+    // ----- Uma vez que as deleções finalizaram, podemos escrever o novo cabeçalho
+    // O arquivo será fechado: status = 1
+    registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1);
 
     free(busca); // Liberar memória da busca
     fclose(arquivoBin);
@@ -312,17 +292,11 @@ void insertInto(char *nomeArquivoBin, int nInsercoes) {
     lerCabecalho(&cabecalho, arquivoBin);
     
     // Verificando consistência do arquivo
-    if(cabecalho.status == '0') { // inconsistente
-        printf("Falha no processamento do arquivo.\n");
-        fclose(arquivoBin);
+    if(!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0))
         return;
-    }
-
-    //Arquivo aberto: inconsistente
-    cabecalho.status = '0';
 
     for (int i = 0; i < nInsercoes; i++) {
-
+        
         //Inserção no topo da pilha
         if (cabecalho.topo != -1) {
 
@@ -331,7 +305,7 @@ void insertInto(char *nomeArquivoBin, int nInsercoes) {
             fread(&cabecalho.topo, sizeof(int), 1, arquivoBin);
 
             //Inserção do novo registro
-            fseek(arquivoBin, - sizeof(int), SEEK_CUR);
+            fseek(arquivoBin, - sizeof(int) - 1, SEEK_CUR);
             escreverRegistroBin(arquivoBin, &registros[i]);
         }
         
@@ -345,11 +319,11 @@ void insertInto(char *nomeArquivoBin, int nInsercoes) {
         }
     }
 
-    //Arquivo será fechado: consistente
-    cabecalho.status = '1';
+    // ---- Atualização dos Pares de Estação
+    utils_contaNroEstacoesNroPares(&cabecalho, arquivoBin);
 
-    fseek(arquivoBin, 0, SEEK_SET);
-    escreverCabecalhoBin(arquivoBin, &cabecalho);
+    registro_gerenciaCabecalho(&cabecalho, arquivoBin, 1);
+    
 
     fclose(arquivoBin);
     //free(registros);
@@ -362,28 +336,19 @@ void update(char* nomeArquivoBin, int nAtualizacoes) {
 
     FILE *arquivoBin = fopen(nomeArquivoBin, "rb+");
 
-    char status;
-    fread(&status, sizeof(char), 1, arquivoBin);
-
-    // Verificando consistência do arquivo
-    if(status == '0') { // inconsistente
-        printf("Falha no processamento do arquivo.\n");
-        fclose(arquivoBin);
-        return;
-    }
-
-    //Arquivo aberto: inconsistente
-    status = '0';
-    fseek(arquivoBin, 0, SEEK_SET);
-    fwrite(&status, sizeof(char), 1, arquivoBin);
+    Cabecalho cabecalho;
+    fread(&cabecalho.status, sizeof(char), 1, arquivoBin);
     
+    // Verificando consistência do arquivo
+    if(!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0))
+        return;
 
     Busca *busca = (Busca*) malloc(2*nAtualizacoes*sizeof(Busca));
     recebeFiltros(busca, 2*nAtualizacoes);
     
     //Todo busca[i].filtro[j], com j par, representa os valores de atualização da busca i
     //Todo busca[i].filtro[j], com j ímpar, representa os valores de filtro da busca i
-    
+
     for (int i = 0; i < 2*nAtualizacoes; i += 2) {
 
         fseek(arquivoBin, 17, SEEK_SET); // Pular cabeçalho
@@ -404,10 +369,12 @@ void update(char* nomeArquivoBin, int nAtualizacoes) {
         free(busca[i].filtro); // Liberar memória dos filtros da busca atual
     }
 
-    //Arquivo será fechado: status consistente
-    status = '1';
+    // ---- Arquivo será fechado: status consistente
+    // Não vamos usar a função "registro_gerenciaCabecalho" aqui, porque ela escreve o cabecalho inteiro
+    // Como só alteramos o status, usar a função com a opção flag = 1 seria overkill
+    cabecalho.status = '1';
     fseek(arquivoBin, 0, SEEK_SET);
-    fwrite(&status, sizeof(char), 1, arquivoBin);
+    fwrite(&cabecalho.status, sizeof(char), 1, arquivoBin);
 
     fclose(arquivoBin);
 

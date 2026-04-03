@@ -5,7 +5,7 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
-    #include "fornecidas.h"
+    #include "../fornecidas/fornecidas.h"
 
     #define TAM_CABECALHO 17
     #define TAM_REGISTRO 80
@@ -37,6 +37,8 @@
     } Registro;
 
     void initCabecalho(Cabecalho *cabecalho);
+    int registro_gerenciaCabecalho(Cabecalho *cabecalho, FILE *arquivoBin, int flag);
+
     void lerCabecalho(Cabecalho *cabecalho, FILE *arquivoBin);
     void escreverCabecalhoBin(FILE *arquivo, Cabecalho *cabecalho);
     
