@@ -59,7 +59,7 @@ void registro_initCabecalho(Cabecalho *cabecalho) {
     cabecalho->topo = -1;               // Nenhum registro removido (Pilha vazia)
     cabecalho->proxRRN = 0;             // Próximo RRN disponível é o primeiro
     cabecalho->nroEstacoes = 0;         // Nenhuma estação armazenada
-   cabecalho->nroParesEstacao = 0;     // Nenhum par de estações armazenado
+    cabecalho->nroParesEstacao = 0;     // Nenhum par de estações armazenado
 }
 
 
@@ -100,7 +100,7 @@ int registro_gerenciaCabecalho(Cabecalho *cabecalho, FILE *arquivoBin, int escre
 }
 
 
-void registro_lerCabecalho(Cabecalho *cabecalho, FILE *arquivoBin) {
+void registro_lerCabecalho(FILE *arquivoBin, Cabecalho *cabecalho) {
 
     fread(&cabecalho->status,          1, 1, arquivoBin);
     fread(&cabecalho->topo,            4, 1, arquivoBin);
@@ -267,26 +267,26 @@ void registro_lerRegistro(Registro *registro) {
             valorInt = (strcmp(valor, "NULO") == 0) ? -1 : atoi(valor);
         }
         
-    //Inserção dos dados no registro
-    if (j == 0)      registro->codEstacao = valorInt;
+        //Inserção dos dados no registro
+        if (j == 0)      registro->codEstacao = valorInt;
 
-    else if (j == 1) {
-        
-        strcpy(registro->nomeEstacao, valor);
-        registro->tamNomeEstacao = strlen(valor);
-    }
-    else if (j == 2) registro->codLinha = valorInt;
+        else if (j == 1) {
+            
+            strcpy(registro->nomeEstacao, valor);
+            registro->tamNomeEstacao = strlen(valor);
+        }
+        else if (j == 2) registro->codLinha = valorInt;
 
-    else if (j == 3) {
+        else if (j == 3) {
 
-        strcpy(registro->nomeLinha, valor);
-        registro->tamNomeLinha = strlen(valor);
-    }
+            strcpy(registro->nomeLinha, valor);
+            registro->tamNomeLinha = strlen(valor);
+        }
 
-    else if (j == 4) registro->codProxEstacao = valorInt;
-    else if (j == 5) registro->distProxEstacao = valorInt;
-    else if (j == 6) registro->codLinhaIntegra = valorInt;
-    else             registro->codEstIntegra = valorInt;
+        else if (j == 4) registro->codProxEstacao = valorInt;
+        else if (j == 5) registro->distProxEstacao = valorInt;
+        else if (j == 6) registro->codLinhaIntegra = valorInt;
+        else             registro->codEstIntegra = valorInt;
     
     }
 }

@@ -188,7 +188,7 @@ void deleteWhere(char *nomeArquivoBin, int nRemocoes) {
     // --- Setando consistência do arquivo para '0'
     // Leitura do cabeçalho
     Cabecalho cabecalho;
-    registro_lerCabecalho(&cabecalho, arquivoBin);
+    registro_lerCabecalho(arquivoBin, &cabecalho);
     
     // Verificando consistência do arquivo
     if (!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0, 0))
@@ -250,7 +250,7 @@ void insertInto(char *nomeArquivoBin, int nInsercoes) {
     // Cabeçalho será setado para inconsistente
     // Leitura do cabeçalho
     Cabecalho cabecalho;
-    registro_lerCabecalho(&cabecalho, arquivoBin);
+    registro_lerCabecalho(arquivoBin, &cabecalho);
     
     // Verificando consistência do arquivo
     if(!registro_gerenciaCabecalho(&cabecalho, arquivoBin, 0, 0))

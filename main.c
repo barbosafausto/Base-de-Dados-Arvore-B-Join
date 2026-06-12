@@ -109,6 +109,24 @@ int main() {
             scanf(" %s %s %d", arquivo1, arquivo2, &nBuscas);
             selectWhereAB(arquivo1, arquivo2, nBuscas);
             break;
+
+        /**
+         * Funcionalidade [9]: INSERT INTO (Na Árvore-B e no Índice)
+         * Insere novos registros no arquivo de dados e atualiza o arquivo de índice Árvore-B para manter a consistência.
+         */
+        case 9:
+            scanf(" %s %s %d", arquivo1, arquivo2, &nBuscas);
+            insertIntoAB(arquivo1, arquivo2, nBuscas);
+            break;
+
+        /**
+         * Funcionalidade [10]: DELETE WHERE (Na Árvode-B e no Índice)
+         * Deleta registros a partir de um filtro.
+         */
+        case 10:
+            scanf(" %s %s %d", arquivo1, arquivo2, &nBuscas);
+            deleteWhereAB(arquivo1, arquivo2, nBuscas);
+            break;
     }
 
     return 0;

@@ -209,3 +209,162 @@ void selectWhereAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nB
     fclose(arquivoDadosBin);
     if (temArvoreB) fclose(arquivoIndiceBin);
 }
+
+/* ========================================================================== *
+ * FUNCIONALIDADE [9] - INSERT INTO NA ÁRVORE-B E NO ARQUIVO DE ÍNDICE        *
+ * ========================================================================== */
+
+/**
+ * @brief Funcionalidade [9]: Insere registros no arquivo de dados.
+ * @param nomeArquivoDadosBin Nome do arquivo de dados.
+ * @param nomeArquivoIndiceBin Nome do arquivo de índice Árvore-B.
+ * @param nInsercoes Quantidade de registros a serem inseridos.
+ */
+void insertIntoAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nInsercoes){
+
+    // --- Abertura e Validação do Arquivo de Dados / Arquivo de Índice ---
+    FILE *arquivoDadosBin = fopen(nomeArquivoDadosBin, "rb+");
+    if(arquivoDadosBin == NULL){
+        printf("Falha no processamento do arquivo de dados.\n");
+        return;
+    }
+
+    FILE *arquivoIndiceBin = fopen(nomeArquivoIndiceBin, "rb+");
+    if(arquivoIndiceBin == NULL){
+        printf("Falha no processamento do arquivo de índice.\n");
+        return;
+    }
+
+
+    // --- Verificando consistência dos arquivos ---
+    Cabecalho cabecalho;
+    registro_lerCabecalho(arquivoDadosBin, &cabecalho);
+
+    if(!registro_gerenciaCabecalho(&cabecalho, arquivoDadosBin, 0, 1)){
+        fclose(arquivoIndiceBin);
+        return;
+    }
+
+    CabecalhoAB cabecalhoAB;
+    arvoreb_lerCabecalhoBin(arquivoIndiceBin, &cabecalhoAB);
+
+    if(!arvoreb_gerenciaCabecalho(&cabecalhoAB, arquivoIndiceBin, 0, 1)){
+        fclose(arquivoDadosBin);
+        return;
+    }
+
+    registro_gerenciaCabecalho(&cabecalho, arquivoDadosBin, 0, 0);
+    arvoreb_gerenciaCabecalho(&cabecalhoAB, arquivoIndiceBin, 0, 0);
+
+
+    // Loop de inserção
+    for(int i = 0; i < nInsercoes; i++){
+
+        Registro registro;
+        registro_lerRegistro(&registro);
+
+        int byteOffsetInserir;
+
+        // Caso 1: existe registro removido para reaproveitar
+        if(cabecalho.topo != -1){
+
+            int rrnReusado = cabecalho.topo;
+            byteOffsetInserir = TAM_CABECALHO + rrnReusado * TAM_REGISTRO;
+
+            // Consumir o próximo RRN da pilha para não perder a referência
+            fseek(arquivoDadosBin, byteOffsetInserir + 1, SEEK_SET);
+            fread(&cabecalho.topo, sizeof(int), 1, arquivoDadosBin);
+
+            // Sobrescrever o registro removido pelo novo
+            fseek(arquivoDadosBin, byteOffsetInserir, SEEK_SET);
+            registro_escreverRegistroBin(arquivoDadosBin, &registro);
+        }
+
+        // Caso 2: topo == -1 (sem registro removido)
+        else {
+            
+            byteOffsetInserir = TAM_CABECALHO + cabecalho.proxRRN * TAM_REGISTRO;
+
+            fseek(arquivoDadosBin, byteOffsetInserir, SEEK_SET);
+            registro_escreverRegistroBin(arquivoDadosBin, &registro);
+
+            cabecalho.proxRRN++;
+        }
+
+        // Atualizar árvore-B (chave codEstação e offset do novo registro)
+        Estacao estacaoInserir = {
+            registro.codEstacao,
+            byteOffsetInserir,
+            -1
+        };
+
+        // Inserir na Árvore-B
+        arvoreb_inserir(arquivoIndiceBin, &cabecalhoAB, estacaoInserir);
+
+    }
+
+}
+
+/* ========================================================================== *
+ * FUNCIONALIDADE [10] - DELETE WHERE NA ÁRVORE-B E NO ARQUIVO DE ÍNDICE      *
+ * ========================================================================== */
+
+/**
+ * @brief Funcionalidade [10]: Deleta registros a partir de um filtro (WHERE). Remoção lógica
+ * @param nomeArquivoDadosBin Nome do arquivo de dados.
+ * @param nomeArquivoIndiceBin Nome do arquivo de índice Árvore-B.
+ * @param nRemocoes Quantidade de registros a serem removidos.
+ */
+void deleteWhereAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nRemocoes){
+
+    // Abrindo os arquivos
+    FILE *arquivoDadosBin = fopen(nomeArquivoDadosBin, "rb+");
+    if(arquivoDadosBin == NULL){
+        printf("Falha no processamento do arquivo de dados.\n");
+        return;
+    }
+
+    FILE *arquivoIndiceBin = fopen(nomeArquivoIndiceBin, "rb+");
+    if(arquivoIndiceBin == NULL){
+        printf("Falha no processamento do arquivo de índice.\n");
+        return;
+    }
+
+    // Validando cabeçalhos
+    Cabecalho cabecalho;
+    registro_lerCabecalho(arquivoDadosBin, &cabecalho);
+
+    if(!registro_gerenciaCabecalho(&cabecalho, arquivoDadosBin, 0, 1)){
+        fclose(arquivoIndiceBin);
+        return;
+    }
+
+    CabecalhoAB cabecalhoAB;
+    arvoreb_lerCabecalhoBin(&cabecalhoAB, arquivoIndiceBin);
+
+    if(!arvoreb_gerenciaCabecalho(&cabecalhoAB, arquivoIndiceBin, 0, 1)){
+        fclose(arquivoDadosBin);
+        return;
+    }
+
+    registro_gerenciaCabecalho(&cabecalho, arquivoDadosBin, 0, 0);
+    arvoreb_gerenciaCabecalho(&cabecalhoAB, arquivoIndiceBin, 0, 0);
+
+
+    // Loop remoção
+    for(int i = 0; i < nRemocoes; i++){
+
+        Busca busca;
+        int codEstacao = utils_recebeCampos(&busca);
+
+        // Caso 1: Remoção com codEstação (busca na árvore-B)
+        if(codEstacao != -1) {
+
+        }
+
+        // Caso 2: Remoção com outros filtros
+        else {
+
+        }
+    }
+}
