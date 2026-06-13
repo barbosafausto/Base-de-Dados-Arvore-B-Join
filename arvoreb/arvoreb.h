@@ -11,6 +11,9 @@
 
     // O tamanho dos registros de dados (nós da árvore) deve ser de 53 bytes.
     #define TAM_NO 53
+
+    // O tamanho do cabeçalho da árvore-b deve ser de 17 bytes
+    #define TAM_CABECALHOAB 17
     
     // A ordem da árvore-B é 4, ou seja, m=4. 
     // Portanto, um nó terá 3 chaves no máximo e 4 descendentes.
@@ -68,14 +71,13 @@
         suas respectivas referências (Pr) para arquivo de dados
         e seus filhos na árvore-B (P2).
 
-        Usamos vetores para poder generalizar um pouco a árvore. :D
+        Usamos vetores para poder generalizar a árvore. :D
         */
         Estacao estacao[ORDEM_ARVORE-1];
 
         /*
         Vamos considerar P1 como o filho adotivo da estacao[0] de cada nó.
         Isso acontece porque as estações possuem apenas filhos direitos.
-        O valor -1 deve ser usado para denotar que um ponteiro é nulo.
         */ 
         int P1; 
 
@@ -104,7 +106,7 @@
 
 
     /* ========================================================================== *
-     * PROTÓTIPOS: MANIPULAÇÃO DE NÓS (I/O)                                       *
+     * PROTÓTIPOS: MANIPULAÇÃO DE NÓS 
      * ========================================================================== */
 
     // Lê uma página (nó) específica da memória secundária dado o seu RRN.
@@ -141,7 +143,7 @@
      * PROTÓTIPOS: FUNCIONALIDADE DE INSERÇÃO                                     *
      * ========================================================================== */
 
-    // Função principal que engatilha o processo de inserção de uma nova chave na árvore.
+    // Função principal que realiza o processo de inserção de uma nova chave na árvore.
     void arvoreb_inserir(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, Estacao estacaoParaInserir);
 
     // Função recursiva interna que desce a árvore, realiza a inserção e propaga eventuais splits para cima.
@@ -150,7 +152,7 @@
     // Realiza o particionamento (split) de uma página lotada, promovendo a chave mediana e criando o novo nó direito.
     Estacao arvoreb_split(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, Estacao *estacaoParaInserir, NO *node, int nodeRRN);
 
-    // Desloca e insere ordenadamente uma chave no vetor em memória (Insertion Sort).
+    // Desloca e insere ordenadamente uma chave no vetor em memória.
     void arvoreb_ordenaNo(Estacao *estacoes, Estacao *estacaoParaInserir, int nroChaves);
 
 

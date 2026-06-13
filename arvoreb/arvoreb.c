@@ -53,6 +53,7 @@ void arvoreb_escreverCabecalhoBin(FILE *arquivoIndiceBin, CabecalhoAB *cabecalho
  */
 int arvoreb_gerenciaCabecalho(CabecalhoAB *cabecalhoAB, FILE *arquivoIndiceBin, int escreverConsistente, int abertoParaLeitura) {
     
+    // Escrita consistente
     if (escreverConsistente == 1) {
         cabecalhoAB->status = '1'; 
         fseek(arquivoIndiceBin, 0, SEEK_SET);
@@ -60,12 +61,14 @@ int arvoreb_gerenciaCabecalho(CabecalhoAB *cabecalhoAB, FILE *arquivoIndiceBin, 
         return 1;
     }
     
+    // Verificação de consistência
     if (cabecalhoAB->status == '0') { 
         printf("Falha no processamento do arquivo.\n");
         fclose(arquivoIndiceBin);
         return 0;
     }
 
+    // Escrita inconsistente
     if (abertoParaLeitura == 0) {
         cabecalhoAB->status = '0';
         fseek(arquivoIndiceBin, 0, SEEK_SET);
@@ -82,14 +85,18 @@ int arvoreb_gerenciaCabecalho(CabecalhoAB *cabecalhoAB, FILE *arquivoIndiceBin, 
 /**
  * @brief Lê uma página (nó) específica da árvore-B diretamente do disco.
  * * @param arquivoIndiceBin Ponteiro para o arquivo binário da árvore-B.
- * @param RRN Registro Relativo Numérico indicando a posição do nó no disco.
+ * @param RRN RRN indicando a posição do nó no disco.
  * @return NO Estrutura do nó preenchida com os dados lidos do arquivo.
  */
 NO arvoreb_lerNoBin(FILE *arquivoIndiceBin, int RRN) {
+    
+    // Struct que guardará as informações lidas
     NO node; 
 
-    fseek(arquivoIndiceBin, 17 + RRN * 53, SEEK_SET);
+    // Posicionando a leitora no offset correto
+    fseek(arquivoIndiceBin, TAM_CABECALHOAB + RRN * TAM_NO, SEEK_SET);
 
+    // --- Leitura ---
     fread(&node.removido, sizeof(char), 1, arquivoIndiceBin);   
     fread(&node.proximo, sizeof(int), 1, arquivoIndiceBin);
     fread(&node.tipoNo, sizeof(int), 1, arquivoIndiceBin);
@@ -105,6 +112,7 @@ NO arvoreb_lerNoBin(FILE *arquivoIndiceBin, int RRN) {
     for (int i = 0; i < ORDEM_ARVORE-1; i++) 
         fread(&node.estacao[i].P2, sizeof(int), 1, arquivoIndiceBin);
 
+    // Retorno do nó preenchido
     return node;
 }
 
@@ -112,22 +120,26 @@ NO arvoreb_lerNoBin(FILE *arquivoIndiceBin, int RRN) {
  * @brief Instancia e inicializa um novo nó (página) da árvore-B na memória.
  * * @param cabecalhoAB Ponteiro para o registro de cabeçalho para atualização de métricas.
  * @param tipoNo Tipo do nó (-1: folha, 0: raiz, 1: intermediário).
- * @param P1 RRN do filho mais à esquerda (ou -1 se for folha).
+ * @param P1 RRN do filho mais à esquerda (ou -1).
  * @param estacao Vetor de estações que comporão inicialmente o nó.
  * @return NO Nova estrutura de nó pronta para ser inserida ou gravada.
  */
 NO arvoreb_criarNoBin(CabecalhoAB *cabecalhoAB, int tipoNo, int P1, Estacao *estacao) {
+
     NO node;
 
+    // --- Informações iniciais ---
     node.removido = '0';      
     node.proximo = -1;      
     node.tipoNo = tipoNo;
 
+    // O único nó que pode ter apenas uma chave é a raiz
     if (tipoNo == 0 || (tipoNo == -1 && cabecalhoAB->nroNos == 0))
         node.nroChaves = 1;
     else 
         node.nroChaves = OCUPACAO_MINIMA;
 
+    // --- Preenchimento do nó ---
     node.P1 = P1; 
     
     for (int i = 0; i < node.nroChaves; i++) 
@@ -137,9 +149,11 @@ NO arvoreb_criarNoBin(CabecalhoAB *cabecalhoAB, int tipoNo, int P1, Estacao *est
     for (int i = node.nroChaves; i < ORDEM_ARVORE-1; i++) 
         node.estacao[i] = estacaoVazia;
 
+    // --- Atualização do cabeçalho ---
     cabecalhoAB->nroNos++;
     cabecalhoAB->proxRRN++;
 
+    // Retorno do nó preenchido
     return node;
 }
 
@@ -147,29 +161,32 @@ NO arvoreb_criarNoBin(CabecalhoAB *cabecalhoAB, int tipoNo, int P1, Estacao *est
  * @brief Grava a estrutura de um nó (página) da RAM para a memória secundária (disco).
  * * @param arquivoIndiceBin Ponteiro para o arquivo binário.
  * @param node Ponteiro para a estrutura contendo os dados a serem gravados.
- * @param RRN Registro Relativo Numérico alvo da gravação.
+ * @param RRN  RRN alvo da gravação.
  */
 void arvoreb_escreverNoBin(FILE *arquivoIndiceBin, NO *node, int RRN) {
-    fseek(arquivoIndiceBin, 17 + RRN * 53, SEEK_SET);
 
+    // Posicionamento da leitora
+    fseek(arquivoIndiceBin, TAM_CABECALHOAB + RRN * TAM_NO, SEEK_SET);
+
+    // --- Escrita do nó ---
     fwrite(&node->removido, sizeof(char), 1, arquivoIndiceBin);
     fwrite(&node->proximo, sizeof(int), 1, arquivoIndiceBin);
     fwrite(&node->tipoNo, sizeof(int), 1, arquivoIndiceBin);
     fwrite(&node->nroChaves, sizeof(int), 1, arquivoIndiceBin);
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < ORDEM_ARVORE-1; i++) {
         fwrite(&node->estacao[i].chave, sizeof(int), 1, arquivoIndiceBin);
         fwrite(&node->estacao[i].Pr, sizeof(int), 1, arquivoIndiceBin);
     }
 
     fwrite(&node->P1, sizeof(int), 1, arquivoIndiceBin);
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < ORDEM_ARVORE-1; i++)
         fwrite(&node->estacao[i].P2, sizeof(int), 1, arquivoIndiceBin);
 }
 
 /**
  * @brief Obtém um RRN disponível, dando prioridade à pilha de nós removidos.
- * Atualiza o cabeçalho (topo, proxRRN e nroNos) mas não o grava (o caller decide quando gravar).
+ * Atualiza o cabeçalho (topo, proxRRN e nroNos) mas não o grava (quem chamou a função decide quando gravar).
  * @param arquivoIndiceBin Ponteiro para o arquivo binário.
  * @param cabecalhoAB Ponteiro para o cabeçalho em memória.
  * @return int O novo RRN livre e alocado logicamente.
@@ -233,17 +250,23 @@ NO arvoreb_montarNo(int tipoNo, int P1, Estacao *estacao, int nroChaves) {
  * ========================================================================== */
 
 /**
- * @brief Realiza busca binária intra-nó para localizar uma chave ou determinar a subárvore correta.
+ * @brief Realiza busca binária dentro de um nó para localizar uma chave ou determinar a subárvore correta.
  * * @param node Ponteiro para o nó onde a busca binária será executada.
  * @param chave Chave de busca (codEstacao) desejada.
  * @return Estacao* Retorna o endereço da estação exata (se encontrada) ou a estação que contém o ponteiro P2 do caminho de descida.
  */
 Estacao* arvoreb_buscaBinaria(NO *node, int chave) {
+    
+    // Variável de retorno
     Estacao *retorno = NULL; 
 
+    // Limites da busca
     int ini = 0, fim = node->nroChaves-1, mid;
+
+    // Estação atual da busca
     Estacao *estacao;
     
+    // --- Busca Binária ---
     while (ini <= fim) {
         mid = (ini+fim) >> 1; 
         estacao = &node->estacao[mid];
@@ -260,6 +283,7 @@ Estacao* arvoreb_buscaBinaria(NO *node, int chave) {
         }
     }
 
+    // Retorno
     return retorno;
 }
 
@@ -272,24 +296,31 @@ Estacao* arvoreb_buscaBinaria(NO *node, int chave) {
  * @return int Retorna a referência (Pr/byte offset) do registro de dados, ou -1 se não for encontrado.
  */
 int arvoreb_buscarRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int nodeRRN, int chave) {
+
+    // Caso base
     if (nodeRRN == -1)
         return -1;
 
+    // Leitura do nó atual
     NO node = arvoreb_lerNoBin(arquivoIndiceBin, nodeRRN);
 
+    // Caso especial: verificamos se devemos descer pelo filho mais à esquerda do nó
     if (chave < node.estacao[0].chave)
         return arvoreb_buscarRecursivo(arquivoIndiceBin, cabecalhoAB, node.P1, chave);
 
+    // Senão, fazer a busca binária
     Estacao *retorno = arvoreb_buscaBinaria(&node, chave);
 
+    // Se encontramos a chave, retornamos seu offset no arquivo de adados
     if (retorno->chave == chave) 
         return retorno->Pr;
 
+    // Senão, continuamos a busca
     return arvoreb_buscarRecursivo(arquivoIndiceBin, cabecalhoAB, retorno->P2, chave);
 }
 
 /**
- * @brief Wrapper para inicializar a busca na árvore-B a partir do nó raiz.
+ * @brief Função que inicializa a busca na árvore-B a partir do nó raiz.
  * * @param arquivoIndiceBin Ponteiro para o arquivo binário.
  * @param cabecalhoAB Ponteiro para o cabeçalho contendo o RRN da raiz.
  * @param chave Chave de busca.
@@ -310,11 +341,17 @@ int arvoreb_buscar(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int chave) 
  * @param nroChaves Quantidade atual de chaves já presentes no vetor.
  */
 void arvoreb_ordenaNo(Estacao *estacoes, Estacao *estacaoParaInserir, int nroChaves) {
+
     for (int i = nroChaves; i >= 0; i--) {
+        
+        // É parecido com um Insertion Sort
+        // Vamos shiftando até achar o ponto de colocar a estação atual
         if (i == 0 || estacoes[i-1].chave < estacaoParaInserir->chave) {
             estacoes[i] = *estacaoParaInserir; 
             break;
         }
+        
+        // Shift para a direita
         else {
             estacoes[i] = estacoes[i-1];
         }
@@ -332,37 +369,47 @@ void arvoreb_ordenaNo(Estacao *estacoes, Estacao *estacaoParaInserir, int nroCha
  */
 Estacao arvoreb_split(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, Estacao *estacaoParaInserir, NO *node, int nodeRRN) {
 
-    // --- Etapa 1: Preparação do Vetor de Transbordo (Ordenação) ---
+    // --- Etapa 1: Preparação do Vetor com Todas as Estações (Ordenação) ---
     Estacao estacoes[ORDEM_ARVORE]; 
 
+    // População do vetor com o nó
     for (int i = 0; i < ORDEM_ARVORE-1; i++)
         estacoes[i] = node->estacao[i];
 
+    // Encontrando um lugar para a nova estação no vetor
     arvoreb_ordenaNo(estacoes, estacaoParaInserir, ORDEM_ARVORE-1);
 
     // --- Etapa 2: Definição da Mediana e Distribuição de Chaves ---
+
+    // A chave promovida é a própria mediana 
     Estacao estacaoPromovida = estacoes[ORDEM_ARVORE/2]; 
 
+    // RRN do novo nó (considerando possíveis remoções)
     int RRNNovoNO = arvoreb_obterRRNNovoNo(arquivoIndiceBin, cabecalhoAB);
 
+    // População do novo nó
     NO novoNo; 
-    
     for (int i = 0; i < OCUPACAO_MINIMA; i++)
         novoNo.estacao[i] = estacoes[ORDEM_ARVORE/2 + 1 + i];
-
     novoNo.P1 = estacaoPromovida.P2;
+
+    // A estação promovida (mediana) tem o novo nó como filho direito
     estacaoPromovida.P2 = RRNNovoNO;
 
+    // Preenchimento do nó original com o vetor de estacoes **após a ordenação**
     for (int i = 0; i < ORDEM_ARVORE/2; i++)
         node->estacao[i] = estacoes[i];
 
+    // Preenchimento do espaço restante (vazio)
     Estacao estacaoVazia = {-1, -1, -1};
     for (int i = ORDEM_ARVORE/2; i < ORDEM_ARVORE-1; i++)
         node->estacao[i] = estacaoVazia;
 
+    // Númmero de chaves do original
     node->nroChaves = ORDEM_ARVORE / 2;
 
     // --- Etapa 3: Tratamento e Hierarquia de Tipos de Nó ---
+    
     if (node->P1 == -1) {
         node->tipoNo = -1; // folha
     } else {
@@ -377,50 +424,66 @@ Estacao arvoreb_split(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, Estacao 
 
     arvoreb_escreverNoBin(arquivoIndiceBin, node, nodeRRN);
 
-    // --- Etapa 4: Criação e Gravação Definitiva ---
+    // --- Etapa 4: Criação e Gravação Persistente ---
+
     novoNo = arvoreb_montarNo(novoNo.tipoNo, novoNo.P1, novoNo.estacao, OCUPACAO_MINIMA);
     arvoreb_escreverNoBin(arquivoIndiceBin, &novoNo, RRNNovoNO);
     
+    // Se o nó atual é a raiz, então uma nova raiz precisa ser criada
     if (nodeRRN == cabecalhoAB->noRaiz) {
+
+        // RRN da nova raiz
         int RRNNovaRaiz = arvoreb_obterRRNNovoNo(arquivoIndiceBin, cabecalhoAB);
         
+        // Atualização do cabeçalho
         cabecalhoAB->noRaiz = RRNNovaRaiz; 
         
+        // Montagem do nó e escrita
         NO novaRaiz = arvoreb_montarNo(0, nodeRRN, &estacaoPromovida, 1);
         arvoreb_escreverNoBin(arquivoIndiceBin, &novaRaiz, RRNNovaRaiz);
     } 
 
+    // Retornamos a estação promovida
     return estacaoPromovida; 
 }
 
 /**
- * @brief Fluxo recursivo principal de inserção de chave ou tratativa de promoção em cascata.
+ * @brief Fluxo recursivo principal de inserção de chave ou tratamento de promoções.
  * * @param arquivoIndiceBin Ponteiro para o arquivo binário.
  * @param cabecalhoAB Ponteiro para o cabeçalho.
  * @param nodeRRN RRN da página alvo desta etapa da recursão.
  * @param estacaoParaInserir Estação contendo a chave candidata a inserção.
- * @return Estacao Retorna uma estação formatada se houver cascata de promoção (split interno) ou chave nula se a operação finalizou no nível inferior.
+ * @return Estacao Retorna uma estação formatada se houver  promoção (split interno) ou chave nula se a operação finalizou no nível inferior.
  */
 Estacao arvoreb_inserirRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int nodeRRN, Estacao estacaoParaInserir) {
+    
+    // Nó atual
     NO node = arvoreb_lerNoBin(arquivoIndiceBin, nodeRRN);
 
+    // --- Recursão somente em nós intermediários ou na raiz, se nroNos > 1
     if (node.tipoNo != -1 && cabecalhoAB->nroNos > 1) {
+        
+        // Caso especial: vemos se precisamos descer na subárvore mais à esquerda do nó
         if (estacaoParaInserir.chave < node.estacao[0].chave)
             estacaoParaInserir = arvoreb_inserirRecursivo(arquivoIndiceBin, cabecalhoAB, node.P1, estacaoParaInserir);
+
+        // Caso padrão: busca binária (encontra a chave ou desce mais)
         else {
             Estacao *retorno = arvoreb_buscaBinaria(&node, estacaoParaInserir.chave);
 
             if (retorno->chave == estacaoParaInserir.chave) {
-                estacaoParaInserir.chave = -1;
+                estacaoParaInserir.chave = -1; // Se encontrar, chave = -1 (não fazemos inserções no retorno)
                 return estacaoParaInserir;
             }
             estacaoParaInserir = arvoreb_inserirRecursivo(arquivoIndiceBin, cabecalhoAB, retorno->P2, estacaoParaInserir);
         }
     }
 
+    // --- Caso base: se chave < 0, não há nada para inserir ---
     if (estacaoParaInserir.chave < 0)
         return estacaoParaInserir;
 
+    // --- Inserindo com espaço ---
     if (node.nroChaves < 3) {
         arvoreb_ordenaNo(node.estacao, &estacaoParaInserir, node.nroChaves); 
         node.nroChaves++;
@@ -428,30 +491,39 @@ Estacao arvoreb_inserirRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoA
         estacaoParaInserir.chave = -1; 
         arvoreb_escreverNoBin(arquivoIndiceBin, &node, nodeRRN); 
     }
+    
+    // --- Inserindo sem espaço: split ---
     else {
         estacaoParaInserir = arvoreb_split(arquivoIndiceBin, cabecalhoAB, &estacaoParaInserir, &node, nodeRRN);
     }
 
+    // Retorno 
     return estacaoParaInserir; 
 }
 
 /**
- * @brief Função principal encapsuladora para solicitar uma inserção na estrutura da árvore-B.
+ * @brief Função principal para solicitar uma inserção na estrutura da árvore-B.
  * * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
  * @param cabecalhoAB Ponteiro para o cabeçalho em RAM.
  * @param estacaoParaInserir Estação (chave + byte offset) inicial lida do arquivo de dados que desencadeia a operação.
  */
 void arvoreb_inserir(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, Estacao estacaoParaInserir) {
+
     NO node;
 
+    // --- Caso em que não há raiz na árvore ---
     if (cabecalhoAB->noRaiz == -1) {
+        
+        // Atualização do cabeçalho
         cabecalhoAB->noRaiz = cabecalhoAB->proxRRN;
         
+        // Criação da raiz
         node = arvoreb_criarNoBin(cabecalhoAB, -1, -1, &estacaoParaInserir);
         arvoreb_escreverNoBin(arquivoIndiceBin, &node, cabecalhoAB->noRaiz);
         return;
     }
     
+    // --- Caso em que há raiz: começamos a recursão
     arvoreb_inserirRecursivo(arquivoIndiceBin, cabecalhoAB, cabecalhoAB->noRaiz, estacaoParaInserir);
 }
 
