@@ -484,7 +484,7 @@ Estacao arvoreb_inserirRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoA
         return estacaoParaInserir;
 
     // --- Inserindo com espaço ---
-    if (node.nroChaves < 3) {
+    if (node.nroChaves < ORDEM_ARVORE-1) {
         arvoreb_ordenaNo(node.estacao, &estacaoParaInserir, node.nroChaves); 
         node.nroChaves++;
 
