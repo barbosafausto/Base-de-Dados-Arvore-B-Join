@@ -258,7 +258,7 @@ void insertIntoAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nIn
     arvoreb_gerenciaCabecalho(&cabecalhoAB, arquivoIndiceBin, 0, 0);
 
 
-    // Loop de inserção
+    // --- Loop de inserção ---
     for(int i = 0; i < nInsercoes; i++){
 
         Registro registro;
@@ -274,6 +274,7 @@ void insertIntoAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nIn
         // Caso 1: existe registro removido para reaproveitar
         if(cabecalho.topo != -1){
 
+            // Apontar corretamente para o endereço a ser reaproveitado
             int rrnReusado = cabecalho.topo;
             byteOffsetInserir = TAM_CABECALHO + rrnReusado * TAM_REGISTRO;
 
@@ -288,7 +289,7 @@ void insertIntoAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nIn
 
         // Caso 2: topo == -1 (sem registro removido)
         else {
-            
+            // Apontar para o próximo RRN, já que não tem o que reaproveitar
             byteOffsetInserir = TAM_CABECALHO + cabecalho.proxRRN * TAM_REGISTRO;
 
             fseek(arquivoDadosBin, byteOffsetInserir, SEEK_SET);
@@ -329,14 +330,14 @@ void insertIntoAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nIn
  * ========================================================================== */
 
 /**
- * @brief Funcionalidade [10]: Deleta registros a partir de um filtro (WHERE). Remoção lógica
+ * @brief Funcionalidade [10]: Deleta registros a partir de um filtro (WHERE). Remoção lógica -> espaço pode ser reaproveitado.
  * @param nomeArquivoDadosBin Nome do arquivo de dados.
  * @param nomeArquivoIndiceBin Nome do arquivo de índice Árvore-B.
  * @param nRemocoes Quantidade de registros a serem removidos.
  */
 void deleteWhereAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nRemocoes){
 
-    // Abrindo os arquivos
+    // --- Abertura e Validação do Arquivo de Dados / Arquivo de Índice ---
     FILE *arquivoDadosBin = fopen(nomeArquivoDadosBin, "rb+");
     if(arquivoDadosBin == NULL){
         printf("Falha no processamento do arquivo.\n");
@@ -345,11 +346,12 @@ void deleteWhereAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nR
 
     FILE *arquivoIndiceBin = fopen(nomeArquivoIndiceBin, "rb+");
     if(arquivoIndiceBin == NULL){
-        printf("Falha no processamento do arquivo\n");
+        printf("Falha no processamento do arquivo.\n");
+        fclose(arquivoDadosBin);
         return;
     }
 
-    // Validando cabeçalhos
+    // --- Verificando consistência dos arquivos ---
     Cabecalho cabecalho;
     registro_lerCabecalho(arquivoDadosBin, &cabecalho);
 
@@ -370,7 +372,7 @@ void deleteWhereAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nR
     arvoreb_gerenciaCabecalho(&cabecalhoAB, arquivoIndiceBin, 0, 0);
 
 
-    // Loop remoção
+    // --- Loop remoção ---
     for(int i = 0; i < nRemocoes; i++){
 
         Busca busca;
@@ -391,8 +393,10 @@ void deleteWhereAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nR
                     if(registro.removido != '1' && utils_compararRegistroComFiltros(&registro, &busca)){
                         int chaveRemocao = registro.codEstacao;
 
+                        // Remoção no arquivo de Dados
                         registro_deletarRegistro(&registro, &cabecalho, arquivoDadosBin, byteOffset + TAM_REGISTRO);
 
+                        // Remoção na Árvore-B (tratamento de Underflow)
                         arvoreb_remover(arquivoIndiceBin, &cabecalhoAB, chaveRemocao);
                     }
                 }
@@ -415,7 +419,7 @@ void deleteWhereAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nR
                 // Registro já removido
                 if(registro.removido == '1') continue;
 
-                // Se o registro for compativel com a busca
+                // Se o registro for compativel com a busca, remova!
                 if(utils_compararRegistroComFiltros(&registro, &busca)){
                     
                     int chaveRemocao = registro.codEstacao;

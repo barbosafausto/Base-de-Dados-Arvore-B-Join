@@ -191,6 +191,11 @@ void arvoreb_escreverNoBin(FILE *arquivoIndiceBin, NO *node, int RRN) {
 /**
  * @brief Obtém um RRN disponível, dando prioridade à pilha de nós removidos.
  * Atualiza o cabeçalho (topo, proxRRN e nroNos) mas não o grava (o caller decide quando gravar).
+ * *
+ * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+ * @param cabecalhoAB Ponteiro para o cabeçalho da árvore-B em RAM.
+ * *
+ * @return RRN disponível para criação ou reutilização de um nó.
  */
 int arvoreb_obterRRNNovoNo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB) {
     int rrnNovo;
@@ -219,6 +224,13 @@ int arvoreb_obterRRNNovoNo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB) {
 /**
  * @brief Monta a estrutura do nó estritamente em memória primária.
  * Isola a responsabilidade de formatação sem afetar as métricas do cabeçalho.
+ * *
+ * @param tipoNo Tipo do nó criado (raiz, intermediário ou folha).
+ * @param P1 Primeiro ponteiro filho do nó.
+ * @param estacao Vetor contendo as chaves que serão copiadas para o nó.
+ * @param nroChaves Quantidade de chaves válidas presentes no vetor estacao.
+ * *
+ * @return Nó da árvore-B montado em memória.
  */
 NO arvoreb_montarNo(int tipoNo, int P1, Estacao *estacao, int nroChaves) {
     NO no;
@@ -516,9 +528,17 @@ void arvoreb_inserir(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, Estacao e
 
 
 /* ========================================================================== *
- * FUNCIONALIDADES DE REMOÇÃO E AUXILIARES                                    *
+ * FUNCIONALIDADES DE REMOÇÃO/AUXILIARES                                      *
  * ========================================================================== */
 
+/**
+  * @brief Encontra a posição de uma chave dentro de um nó da árvore-B.
+  * *
+  * @param node Ponteiro para o nó da árvore-B em RAM.
+  * @param chave Chave procurada dentro do nó.
+  * *
+  * @return Posição da chave no nó, ou posição do filho onde a busca deve continuar (para descer na árvore).
+*/
 int arvoreb_encontrarPosicao(NO *node, int chave) {
     int i = 0;
     while (i < node->nroChaves && chave > node->estacao[i].chave) {
@@ -527,6 +547,14 @@ int arvoreb_encontrarPosicao(NO *node, int chave) {
     return i;
 }
 
+/**
+  * @brief Recupera (get) o RRN de um filho de acordo com sua posição no nó.
+  * *
+  * @param node Ponteiro para o nó da árvore-B em RAM.
+  * @param pos Posição do filho a ser recuperado.
+  * *
+  * @return RRN do filho correspondente, ou -1 caso a posição seja inválida.
+*/
 int arvoreb_getFilho(NO *node, int pos) {
     if (pos < 0 || pos > ORDEM_ARVORE - 1) return -1;
 
@@ -534,6 +562,13 @@ int arvoreb_getFilho(NO *node, int pos) {
     return node->estacao[pos - 1].P2;
 }
 
+/**
+  * @brief Atualiza (set) o RRN de um filho de acordo com sua posição no nó.
+  * *
+  * @param node Ponteiro para o nó da árvore-B em RAM.
+  * @param pos Posição do filho a ser atualizado.
+  * @param rrn Novo RRN que será armazenado como ponteiro filho.
+*/
 void arvoreb_setFilho(NO *node, int pos, int rrn) {
     if (pos < 0 || pos > ORDEM_ARVORE - 1) return;
 
@@ -544,6 +579,12 @@ void arvoreb_setFilho(NO *node, int pos, int rrn) {
     }
 }
 
+/**
+  * @brief Remove uma chave de um nó da árvore-B. Desloca as chaves e mantém o nó ordenado.
+  * *
+  * @param node Ponteiro para o nó da árvore-B em RAM.
+  * @param pos Posição da chave que será removida do nó.
+*/
 void arvoreb_removerChaveDoNo(NO *node, int pos) {
     // Desloca as chaves, referências e ponteiros para a esquerda a partir de 'pos'
     for (int i = pos; i < node->nroChaves - 1; i++) {
@@ -556,6 +597,14 @@ void arvoreb_removerChaveDoNo(NO *node, int pos) {
     node->nroChaves--;
 }
 
+/**
+  * @brief Busca a sucessora imediata em folha dentro da subárvore direita (menor da subárvore direita).
+  * *
+  * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+  * @param rrnSubarvoreDireita RRN da raiz da subárvore direita.
+  * *
+  * @return Estação sucessora imediata encontrada.
+*/
 Estacao arvoreb_buscarSucessora(FILE *arquivoIndiceBin, int rrnSubarvoreDireita) {
     NO atual = arvoreb_lerNoBin(arquivoIndiceBin, rrnSubarvoreDireita);
     
@@ -567,6 +616,13 @@ Estacao arvoreb_buscarSucessora(FILE *arquivoIndiceBin, int rrnSubarvoreDireita)
     return atual.estacao[0];
 }
 
+/**
+  * @brief Empilha um nó removido na pilha de páginas removidas da árvore-B.
+  * *
+  * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+  * @param cabecalhoAB Ponteiro para o cabeçalho da árvore-B em RAM.
+  * @param rrnRemovido RRN do nó que será marcado como removido e empilhado.
+*/
 void arvoreb_empilharNoRemovido(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnRemovido) {
     NO removido = arvoreb_lerNoBin(arquivoIndiceBin, rrnRemovido);
     
@@ -582,47 +638,69 @@ void arvoreb_empilharNoRemovido(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB
 }
 
 /* -------------------------------------------------------------------------- *
- * TRATAMENTO DE UNDERFLOW: REDISTRIBUIÇÃO E CONCATENAÇÃO                     *
+ * REDISTRIBUIÇÃO E CONCATENAÇÃO (Underflow)                                  *
  * -------------------------------------------------------------------------- */
-
+/**
+ * @brief Tenta corrigir underflow redistribuindo chaves com o irmão direito.
+ * * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+ * @param rrnPai RRN da página pai.
+ * @param pai Ponteiro para o nó pai em RAM.
+ * @param posFilho Posição lógica do filho em underflow dentro do pai.
+ * @param rrnFilho RRN do filho em underflow.
+ * @param filho Ponteiro para o nó filho em underflow.
+ * @param rrnDir RRN do irmão direito.
+ * * @return 1 se a redistribuição foi realizada, ou 0 caso contrário.
+ */
 int arvoreb_redistribuirDireita(FILE *arquivoIndiceBin, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnDir) {
-    if (rrnDir == -1) return 0;
+    if (rrnDir == -1) return 0; // Sem irmão direito
 
     NO irmaoDir = arvoreb_lerNoBin(arquivoIndiceBin, rrnDir);
 
-    if (irmaoDir.nroChaves <= OCUPACAO_MINIMA) return 0;
+    if (irmaoDir.nroChaves <= OCUPACAO_MINIMA) return 0; // Só refistribui se tiver mais que a ocupação mínima
 
     Estacao vazia = {-1, -1, -1};
 
+    // Caso 1: irmão direito com duas chaves (uma chave transferida).
     if (irmaoDir.nroChaves == 2) {
+        
+        // 1. A chave separadora do pai desce para o final do filho
         filho->estacao[filho->nroChaves].chave = pai->estacao[posFilho].chave;
         filho->estacao[filho->nroChaves].Pr = pai->estacao[posFilho].Pr;
         filho->estacao[filho->nroChaves].P2 = irmaoDir.P1;
         filho->nroChaves++;
 
+        // 2. Primeira chave do irmão direito sobe para o pai
         pai->estacao[posFilho].chave = irmaoDir.estacao[0].chave;
         pai->estacao[posFilho].Pr = irmaoDir.estacao[0].Pr;
 
+        // 3. Antigo P2 da primeira chave (irmão direito) vira o novo P1
         irmaoDir.P1 = irmaoDir.estacao[0].P2;
         arvoreb_removerChaveDoNo(&irmaoDir, 0);
     }
 
+    // Caso 2: irmão direito tem 3 chaves, redistribuição deve ficar uniforme
     else if (irmaoDir.nroChaves == 3) {
+
+        // Salvar chaves antes de reorganizar
         Estacao r0 = irmaoDir.estacao[0];
         Estacao r1 = irmaoDir.estacao[1];
         Estacao r2 = irmaoDir.estacao[2];
 
+        // 1. A chave separadora do pai desce para o final do filho
         filho->estacao[filho->nroChaves].chave = pai->estacao[posFilho].chave;
         filho->estacao[filho->nroChaves].Pr = pai->estacao[posFilho].Pr;
         filho->estacao[filho->nroChaves].P2 = irmaoDir.P1;
         filho->nroChaves++;
 
+        // 2. A primeira chave do irmão direito também vai para o filho
         filho->estacao[filho->nroChaves] = r0;
         filho->nroChaves++;
 
+        // 3. A segunda chave do irmão direito sobe para o pai
         pai->estacao[posFilho].chave = r1.chave;
         pai->estacao[posFilho].Pr = r1.Pr;
 
+        // 4. O irmão direito fica apenas com a terceira chave
         irmaoDir.P1 = r1.P2;
         irmaoDir.estacao[0] = r2;
         irmaoDir.estacao[1] = vazia;
@@ -637,6 +715,18 @@ int arvoreb_redistribuirDireita(FILE *arquivoIndiceBin, int rrnPai, NO *pai, int
     return 1;
 }
 
+
+/**
+ * @brief Tenta corrigir underflow redistribuindo chaves com o irmão esquerdo.
+ * * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+ * @param rrnPai RRN da página pai.
+ * @param pai Ponteiro para o nó pai em RAM.
+ * @param posFilho Posição lógica do filho em underflow dentro do pai.
+ * @param rrnFilho RRN do filho em underflow.
+ * @param filho Ponteiro para o nó filho em underflow.
+ * @param rrnEsq RRN do irmão esquerdo.
+ * * @return 1 se a redistribuição foi realizada, ou 0 caso contrário.
+ */
 int arvoreb_redistribuirEsquerda(FILE *arquivoIndiceBin, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnEsq) {
     if (rrnEsq == -1) return 0;
     
@@ -669,6 +759,18 @@ int arvoreb_redistribuirEsquerda(FILE *arquivoIndiceBin, int rrnPai, NO *pai, in
     return 1;
 }
 
+/**
+ * @brief Tenta corrigir underflow concatenando o filho com seu irmão esquerdo.
+ * * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+ * @param cabecalhoAB Ponteiro para o cabeçalho da árvore-B em RAM.
+ * @param rrnPai RRN da página pai.
+ * @param pai Ponteiro para o nó pai em RAM.
+ * @param posFilho Posição lógica do filho em underflow dentro do pai.
+ * @param rrnFilho RRN do filho em underflow.
+ * @param filho Ponteiro para o nó filho em underflow.
+ * @param rrnEsq RRN do irmão esquerdo.
+ * * @return 1 se a redistribuição foi realizada, ou 0 caso contrário.
+ */
 int arvoreb_concatenarEsquerda(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnEsq) {
     if (rrnEsq == -1) return 0;
     if (posFilho <= 0) return 0; // Proteção de limite de índice no nó pai
@@ -703,6 +805,18 @@ int arvoreb_concatenarEsquerda(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB,
     return 1;
 }
 
+/**
+ * @brief Corrige underflow concatenando o filho com seu irmão direito.
+ * * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+ * @param cabecalhoAB Ponteiro para o cabeçalho da árvore-B em RAM.
+ * @param rrnPai RRN da página pai.
+ * @param pai Ponteiro para o nó pai em RAM.
+ * @param posFilho Posição lógica do filho em underflow dentro do pai.
+ * @param rrnFilho RRN do filho em underflow.
+ * @param filho Ponteiro para o nó filho em underflow.
+ * @param rrnDir RRN do irmão direito.
+ * * @return 1 se a redistribuição foi realizada, ou 0 caso contrário.
+ */
 int arvoreb_concatenarDireita(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnDir) {
     if (rrnDir == -1) return 0;
     if (posFilho < 0 || posFilho >= pai->nroChaves) return 0; // Proteção de limite de índice no nó pai
@@ -737,6 +851,15 @@ int arvoreb_concatenarDireita(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, 
     return 1;
 }
 
+/**
+  * @brief Corrige o underflow de um filho da página pai de acordo com a sequência de redistribuição e concatenação.
+  * *
+  * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+  * @param cabecalhoAB Ponteiro para o cabeçalho da árvore-B em RAM.
+  * @param rrnPai RRN da página pai.
+  * @param pai Ponteiro para o nó pai em RAM.
+  * @param posFilho Posição lógica do filho em underflow dentro do pai.
+*/
 void arvoreb_corrigirUnderflow(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnPai, NO *pai, int posFilho) {
     int rrnFilho = arvoreb_getFilho(pai, posFilho);
     if (rrnFilho == -1) return; // Proteção contra leitura inválida
@@ -746,6 +869,8 @@ void arvoreb_corrigirUnderflow(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB,
     // Identifica os irmãos adjacentes
     int rrnEsq = (posFilho > 0) ? arvoreb_getFilho(pai, posFilho - 1) : -1;
     int rrnDir = (posFilho < pai->nroChaves) ? arvoreb_getFilho(pai, posFilho + 1) : -1;
+
+    // Seguindo a ordem especificada:
 
     // Prioridade 1: Redistribuição com a página adjacente à direita
     if (arvoreb_redistribuirDireita(arquivoIndiceBin, rrnPai, pai, posFilho, rrnFilho, &filho, rrnDir)) return;
@@ -761,29 +886,38 @@ void arvoreb_corrigirUnderflow(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB,
 }
 
 /* -------------------------------------------------------------------------- *
- * FLUXO PRINCIPAL RECURSIVO E AJUSTE DE RAIZ                                 *
+ * CHAMADAS PRINCIPAIS E AJUSTE DE RAIZ                                       *
  * -------------------------------------------------------------------------- */
 
-// Retorna 1 se a chave foi encontrada e removida, e 0 caso contrário.
+/**
+  * @brief Remove uma chave da árvore-B de forma recursiva.
+  * *
+  * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+  * @param cabecalhoAB Ponteiro para o cabeçalho da árvore-B em RAM.
+  * @param rrnAtual RRN da página atual visitada na recursão.
+  * @param chave Chave a ser removida da árvore-B.
+  * *
+  * @return 1 se a chave foi encontrada e removida, ou 0 caso contrário.
+*/
 int arvoreb_removerRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnAtual, int chave) {
-    if (rrnAtual == -1) return 0; // Condição de parada: a chave não existe na árvore
+    if (rrnAtual == -1) return 0; // Chave não existe na árvore
     
     NO atual = arvoreb_lerNoBin(arquivoIndiceBin, rrnAtual);
     int pos = arvoreb_encontrarPosicao(&atual, chave);
     
-    // CASO 1: A chave alvo está na página atual
+    // CASO 1: A chave está na página atual
     if (pos < atual.nroChaves && atual.estacao[pos].chave == chave) {
         if (atual.tipoNo == -1) { 
-            // 1.A: É um nó folha. Remoção física simples.
+            // 1.A: É um nó folha. Remoção simples.
             arvoreb_removerChaveDoNo(&atual, pos);
             arvoreb_escreverNoBin(arquivoIndiceBin, &atual, rrnAtual);
         } else {
             // 1.B: É um nó intermediário ou raiz. Troca com a sucessora.
             int rrnFilhoDireita = arvoreb_getFilho(&atual, pos + 1);
-            if (rrnFilhoDireita == -1) return 0; // Proteção de integridade estrutural
+            if (rrnFilhoDireita == -1) return 0; // Garantir integridade
 
             Estacao sucessora = arvoreb_buscarSucessora(arquivoIndiceBin, rrnFilhoDireita);
-            if (sucessora.chave == -1) return 0; // Proteção contra sucessora inválida
+            if (sucessora.chave == -1) return 0; // Proteção p sucessora inválida
             
             // Substitui a chave que queremos apagar pela chave sucessora
             atual.estacao[pos].chave = sucessora.chave;
@@ -793,7 +927,7 @@ int arvoreb_removerRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, i
             // Continua descendo para remover a cópia duplicada da chave sucessora
             arvoreb_removerRecursivo(arquivoIndiceBin, cabecalhoAB, rrnFilhoDireita, sucessora.chave);
             
-            // Pós-recursão do Caso 1.B: Verifica sob a subárvore direita se houve underflow
+            // Verifica a subárvore direita (se houve underflow)
             atual = arvoreb_lerNoBin(arquivoIndiceBin, rrnAtual);
             NO filhoDir = arvoreb_lerNoBin(arquivoIndiceBin, rrnFilhoDireita);
             
@@ -803,19 +937,20 @@ int arvoreb_removerRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, i
             }
         }
     } 
-    // CASO 2: A chave não está aqui, precisamos descer mais na árvore
+    // CASO 2: Descer na árvore
     else {
-        if (atual.tipoNo == -1) return 0; // Alcançou a folha e a chave não existe
+        if (atual.tipoNo == -1) return 0; // Chegou na folha e a chave não existe
         
         int rrnFilho = arvoreb_getFilho(&atual, pos);
         int removeu = arvoreb_removerRecursivo(arquivoIndiceBin, cabecalhoAB, rrnFilho, chave);
         
-        if (!removeu) return 0; // Corta a execução se nada foi removido
+        if (!removeu) return 0; // Encerra execução se nada foi removido
         
-        // Pós-recursão do Caso 2: Verifica se o filho em que descemos caiu em underflow
+        // Verifica se o filho em que descemos está em underflow
         atual = arvoreb_lerNoBin(arquivoIndiceBin, rrnAtual);
         NO filho = arvoreb_lerNoBin(arquivoIndiceBin, rrnFilho);
         
+        // Correção de Underflow
         if (filho.removido == '0' && filho.nroChaves < OCUPACAO_MINIMA) {
             arvoreb_corrigirUnderflow(arquivoIndiceBin, cabecalhoAB, rrnAtual, &atual, pos);
         }
@@ -824,6 +959,12 @@ int arvoreb_removerRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, i
     return 1;
 }
 
+/**
+  * @brief Ajusta a raiz da árvore-B após uma remoção.
+  * *
+  * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+  * @param cabecalhoAB Ponteiro para o cabeçalho da árvore-B em RAM.
+*/
 void arvoreb_ajustarRaiz(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB) {
     if (cabecalhoAB->noRaiz == -1) return;
 
@@ -844,6 +985,7 @@ void arvoreb_ajustarRaiz(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB) {
             return;
         }
 
+        // Troca a raiz
         cabecalhoAB->noRaiz = novaRaizRRN;
 
         // Promove o filho e ajusta o tipoNo corretamente
@@ -855,6 +997,7 @@ void arvoreb_ajustarRaiz(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB) {
             novaRaiz.tipoNo = 0;  // A nova raiz é intermediária
         }
 
+        // Atualizar o índice
         arvoreb_escreverNoBin(arquivoIndiceBin, &novaRaiz, novaRaizRRN);
     } else {
         // A raiz era uma folha que ficou sem chaves
@@ -863,12 +1006,19 @@ void arvoreb_ajustarRaiz(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB) {
     }
 }
 
+/**
+  * @brief Função principal para remover uma chave da árvore-B (chama a recursão).
+  * *
+  * @param arquivoIndiceBin Ponteiro para o arquivo binário do índice.
+  * @param cabecalhoAB Ponteiro para o cabeçalho da árvore-B em RAM.
+  * @param chave Chave a ser removida da árvore-B.
+*/
 void arvoreb_remover(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int chave) {
-    if (cabecalhoAB->noRaiz == -1) return; // Árvore vazia, não há o que remover
+    if (cabecalhoAB->noRaiz == -1) return; // Árvore vazia
     
     int removeu = arvoreb_removerRecursivo(arquivoIndiceBin, cabecalhoAB, cabecalhoAB->noRaiz, chave);
     
-    // Só precisamos verificar o status da raiz se houve de fato uma remoção
+    // Só precisamos verificar o status da raiz se houve uma remoção
     if (removeu) {
         arvoreb_ajustarRaiz(arquivoIndiceBin, cabecalhoAB);
     }

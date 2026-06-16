@@ -158,19 +158,40 @@
      * PROTÓTIPOS: FUNCIONALIDADE DE REMOÇÃO                                      *
      * ========================================================================== */
 
+    // Função principal da remoção. Chama a de recursão.
     void arvoreb_remover(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int chave);
+
+    // Função recursiva que busca e remove a chave da árvore.
+    // Retorna 1 se a chave foi encontrada/removida, e 0 caso contrário.
     int arvoreb_removerRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnAtual, int chave);
+
+    /*   --- Funções auxiliares ---                                               */
+    // Encontrar posição da chave (ou do filho) no nó.
     int arvoreb_encontrarPosicao(NO *node, int chave);
+
+    // Recuperar e atualizar o nó filho
     int arvoreb_getFilho(NO *node, int pos);
     void arvoreb_setFilho(NO *node, int pos, int rrn);
+
+    // Remover (e atualizar) as chaves do nó
     void arvoreb_removerChaveDoNo(NO *node, int pos);
+
+    // Realizar a troca com o sucessor imediato para a remoção
     Estacao arvoreb_buscarSucessora(FILE *arquivoIndiceBin, int rrnSubarvoreDireita);
+
+    // Colocar o RRN na stack de nós removidos (reutilização)
     void arvoreb_empilharNoRemovido(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnRemovido);
+
+    /*   --- Tratamento de Underflow ---                                         */
     void arvoreb_corrigirUnderflow(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnPai, NO *pai, int posFilho);
+
+    // Etapas de rebalanceamento
     int arvoreb_redistribuirDireita(FILE *arquivoIndiceBin, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnDir);
     int arvoreb_redistribuirEsquerda(FILE *arquivoIndiceBin, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnEsq);
     int arvoreb_concatenarEsquerda(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnEsq);
     int arvoreb_concatenarDireita(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnDir);
+
+    // Atualizar a raiz
     void arvoreb_ajustarRaiz(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB);
 
 
