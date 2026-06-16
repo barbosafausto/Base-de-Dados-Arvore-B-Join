@@ -160,23 +160,34 @@
      * PROTÓTIPOS: FUNCIONALIDADE DE REMOÇÃO                                      *
      * ========================================================================== */
 
-    // --- Interface Pública e Controle de Raiz ---
-
-    // Funcionalidade encapsuladora externa para requisição de deleção de chave.
+    // Função principal da remoção. Chama a de recursão.
     void arvoreb_remover(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int chave);
 
-    // Caminha recursivamente a árvore para apagar chaves e gerenciar eventuais subidas de underflow.
+    // Função recursiva que busca e remove a chave da árvore.
+    // Retorna 1 se a chave foi encontrada/removida, e 0 caso contrário.
     int arvoreb_removerRecursivo(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnAtual, int chave);
 
-    // Verifica se a raiz ficou vazia após deleções e rebaixa a altura da árvore, se necessário.
-    void arvoreb_ajustarRaiz(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB);
+    /*   --- Funções auxiliares ---                                               */
+    // Encontrar posição da chave (ou do filho) no nó.
+    int arvoreb_encontrarPosicao(NO *node, int chave);
 
-    // --- Estratégias de Tratamento de Underflow ---
+    // Recuperar e atualizar o nó filho
+    int arvoreb_getFilho(NO *node, int pos);
+    void arvoreb_setFilho(NO *node, int pos, int rrn);
 
-    // Gerenciador de estratégia. Testa empréstimos e fusões até que a página volte ao balanço matemático.
+    // Remover (e atualizar) as chaves do nó
+    void arvoreb_removerChaveDoNo(NO *node, int pos);
+
+    // Realizar a troca com o sucessor imediato para a remoção
+    Estacao arvoreb_buscarSucessora(FILE *arquivoIndiceBin, int rrnSubarvoreDireita);
+
+    // Colocar o RRN na stack de nós removidos (reutilização)
+    void arvoreb_empilharNoRemovido(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnRemovido);
+
+    /*   --- Tratamento de Underflow ---                                         */
     void arvoreb_corrigirUnderflow(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnPai, NO *pai, int posFilho);
 
-    // Executa empréstimo de UMA chave do irmão direito para suprir um filho em underflow.
+    // Etapas de rebalanceamento
     int arvoreb_redistribuirDireita(FILE *arquivoIndiceBin, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnDir);
 
     // Executa empréstimo de chaves do irmão esquerdo para suprir um filho em underflow via pai.
@@ -187,6 +198,9 @@
 
     // Variante de união: o irmão direito cede todas as chaves para o nó em underflow e é destruído.
     int arvoreb_concatenarDireita(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB, int rrnPai, NO *pai, int posFilho, int rrnFilho, NO *filho, int rrnDir);
+
+    // Atualizar a raiz
+    void arvoreb_ajustarRaiz(FILE *arquivoIndiceBin, CabecalhoAB *cabecalhoAB);
 
     // --- Funções Auxiliares de Manipulação ---
 
