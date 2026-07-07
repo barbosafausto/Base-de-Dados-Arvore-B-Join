@@ -129,25 +129,43 @@ int main() {
             deleteWhereAB(arquivo1, arquivo2, nBuscas);
             break;
 
+        /**
+         * Funcionalidade [11]: JUNÇÃO DE LOOP ANINHADO 
+         * Realiza a junção entre dois arquivos de dados por varredura sequencial (força bruta).
+         */
         case 11:
             scanf(" %s %s %s %s", arquivo1, campo1, arquivo2, campo2);
             selectWhereJoin(arquivo1, arquivo2);
             break;
 
+        /**
+         * Funcionalidade [12]: JUNÇÃO DE LOOP ÚNICO 
+         * Realiza a junção buscando os cruzamentos de dados usando o índice da Árvore-B.
+         */
         case 12:
             scanf(" %s %s %s %s %s", arquivo1, campo1, arquivo2, campo2, arquivo3);
             selectWhereJoinAB(arquivo1, arquivo2, arquivo3);
             break;
 
+        /**
+         * Funcionalidade [13]: ORDENAÇÃO (ORDER BY)
+         * Lê os dados para a RAM, ordena de forma crescente baseado em um campo (usando qsort)
+         * e escreve em um novo arquivo binário, ignorando os registros logicamente removidos.
+         */
         case 13:
             scanf(" %s %s %s", arquivo1, campo1, arquivo2);
             orderBy(arquivo1, campo1, arquivo2, 0);
             break;
 
+        /**
+         * Funcionalidade [14]: JUNÇÃO ORDENAÇÃO-INTERCALAÇÃO 
+         * Ordena ambos os arquivos de entrada usando a funcionalidade 13 e realiza o merge paralelo.
+         */
         case 14:
             scanf(" %s %s %s %s", arquivo1, campo1, arquivo2, campo2);
             juncao(arquivo1, arquivo2);
             break;
+
     }
 
     return 0;
