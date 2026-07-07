@@ -98,11 +98,11 @@ NO arvoreb_lerNoBin(FILE *arquivoIndiceBin, int RRN) {
 
     // --- Leitura ---
     fread(&node.removido, sizeof(char), 1, arquivoIndiceBin);   
+    fread(&node.proximo, sizeof(int), 1, arquivoIndiceBin);
 
-    // Nós removidos não são lidos
+    // Nós removidos não são lidos (lemos apenas o essencial)
     if (node.removido == '1') return node;
 
-    fread(&node.proximo, sizeof(int), 1, arquivoIndiceBin);
     fread(&node.tipoNo, sizeof(int), 1, arquivoIndiceBin);
     fread(&node.nroChaves, sizeof(int), 1, arquivoIndiceBin);
 
