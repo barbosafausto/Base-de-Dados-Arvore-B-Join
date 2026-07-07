@@ -355,9 +355,6 @@ void deleteWhereAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nR
         return;
     }
 
-    registro_gerenciaCabecalho(&cabecalho, arquivoDadosBin, 0, 0);
-    arvoreb_gerenciaCabecalho(&cabecalhoAB, arquivoIndiceBin, 0, 0);
-
 
     // --- Loop remoção ---
     for(int i = 0; i < nRemocoes; i++){

@@ -23,4 +23,5 @@ Thumbs.db
 # Testes e Binários, pois podem ficar desatualizados
 Testes/
 Binários/
-Entrada/
+arq_entrada/
+arq_saida/

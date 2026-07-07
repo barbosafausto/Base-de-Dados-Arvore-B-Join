@@ -97,4 +97,8 @@
     // Aplica a remoção lógica (tombstone), manipula a pilha e volta o cursor fisicamente.
     void registro_deletarRegistro(Registro *registro, Cabecalho *cabecalho, FILE *arquivoBin, int offsetAtual);
 
+    // Imprime os dados no formato exigido para as funções que usam JOIN.
+    void registro_imprimirRegistrosJoin(Registro *registro1, Registro *registro2);
+
+
 #endif

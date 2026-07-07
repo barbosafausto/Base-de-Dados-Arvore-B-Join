@@ -20,6 +20,10 @@ int main() {
     int nBuscas;        // Variável auxiliar para armazenar a quantidade de operações em lote
     char arquivo1[64];  // Nome do primeiro arquivo de entrada/saída
     char arquivo2[64];  // Nome do segundo arquivo de entrada/saída (geralmente índice ou CSV)
+    char arquivo3[64];  
+    
+    char campo1[64];
+    char campo2[64];
 
     // A primeira entrada define a funcionalidade. Se não conseguir ler, encerra.
     if (scanf("%d", &funcionalidade) != 1) {
@@ -123,6 +127,26 @@ int main() {
         case 10:
             scanf(" %s %s %d", arquivo1, arquivo2, &nBuscas);
             deleteWhereAB(arquivo1, arquivo2, nBuscas);
+            break;
+
+        case 11:
+            scanf(" %s %s %s %s", arquivo1, campo1, arquivo2, campo2);
+            selectWhereJoin(arquivo1, arquivo2);
+            break;
+
+        case 12:
+            scanf(" %s %s %s %s %s", arquivo1, campo1, arquivo2, campo2, arquivo3);
+            selectWhereJoinAB(arquivo1, arquivo2, arquivo3);
+            break;
+
+        case 13:
+            scanf(" %s %s %s", arquivo1, campo1, arquivo2);
+            orderBy(arquivo1, campo1, arquivo2, 0);
+            break;
+
+        case 14:
+            scanf(" %s %s %s %s", arquivo1, campo1, arquivo2, campo2);
+            juncao(arquivo1, arquivo2);
             break;
     }
 

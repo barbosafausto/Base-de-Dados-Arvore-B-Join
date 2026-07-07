@@ -95,4 +95,43 @@
      */
     void deleteWhereAB(char *nomeArquivoDadosBin, char *nomeArquivoIndiceBin, int nRemocoes);
 
+
+    /* ========================================================================== *
+     * FUNCIONALIDADES DE JUNÇÃO E ORDENAÇÃO (TRABALHO PRÁTICO 2)                 *
+     * ========================================================================== */
+
+    /**
+     * @brief Funcionalidade [11]: Realiza a junção usando Loop Aninhado 
+     * Essa estratégia de varredura dos arquivos tem complexidade O(n²), pois não usa índices.
+     * @param nomeArquivo1 Nome do primeiro arquivo binário de dados (loop externo).
+     * @param nomeArquivo2 Nome do segundo arquivo binário de dados (loop interno).
+     */
+    void selectWhereJoin(char *nomeArquivo1, char *nomeArquivo2);
+
+    /**
+     * @brief Funcionalidade [12]: Realiza a junção usando Árvore-B.
+     * Otimiza o loop interno transformando a busca O(n) em acesso O(log n).
+     * @param nomeArquivoDados1 Nome do arquivo binário de dados base (varredura principal).
+     * @param nomeArquivoDados2 Nome do segundo arquivo binário de dados (acesso pontual via árvore-b).
+     * @param nomeArquivoIndice2 Nome do arquivo de índice Árvore-B referente ao segundo arquivo de dados.
+     */
+    void selectWhereJoinAB(char *nomeArquivoDados1, char *nomeArquivoDados2, char *nomeArquivoIndice2);
+
+    /**
+     * @brief Funcionalidade [13]: Ordena os registros de um arquivo binário em RAM e os persiste desconsiderando registros removidos.
+     * @param nomeArquivoDesord Nome do arquivo contendo os dados originais brutos.
+     * @param campoDeOrdenacao String definindo qual chave primária/estrangeira ditará a ordenação.
+     * @param nomeArquivoOrd Nome do novo arquivo binário de saída que conterá a versão ordenada.
+     * @param usarComoAuxiliar Flag de controle (1 = suprime o BinarioNaTela para uso em background).
+     */
+    void orderBy(char *nomeArquivoDesord, char *campoDeOrdenacao, char *nomeArquivoOrd, int usarComoAuxiliar);
+
+    /**
+     * @brief Funcionalidade [14]: Realiza a Junção de Ordenação e Intercalação.
+     * Resolve a busca em tempo O(n + m) após ordenação prévia, explorando a unicidade da chave codEstacao.
+     * @param nomeArquivo1 Nome do primeiro arquivo binário de dados original.
+     * @param nomeArquivo2 Nome do segundo arquivo binário de dados original.
+     */
+    void juncao(char *nomeArquivo1, char *nomeArquivo2);
+
 #endif

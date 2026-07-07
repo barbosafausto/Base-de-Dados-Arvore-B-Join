@@ -16,7 +16,7 @@ HEADERS = fornecidas/fornecidas.h funcionalidades/funcionalidades.h registro/reg
 INCLUDES = -I./fornecidas -I./funcionalidades -I./registro -I./utils -I./arvoreb
 
 # .c
-SRC = main.c fornecidas/fornecidas.c funcionalidades/funcionalidades\ [0].c funcionalidades/funcionalidades\ [1].c registro/registro.c utils/utils.c arvoreb/arvoreb.c
+SRC = main.c fornecidas/fornecidas.c funcionalidades/funcionalidades\ [0].c funcionalidades/funcionalidades\ [1].c funcionalidades/funcionalidades\ [2].c registro/registro.c utils/utils.c arvoreb/arvoreb.c
 
 
 # ----- Regras de Compilação -----

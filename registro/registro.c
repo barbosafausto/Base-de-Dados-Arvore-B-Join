@@ -345,3 +345,10 @@ void registro_deletarRegistro(Registro *registro, Cabecalho *cabecalho, FILE *ar
     // e consiga ler o próximo registro sem falhas de sincronia.
     fseek(arquivoBin, offsetAtual, SEEK_SET);
 }
+
+void registro_imprimirRegistrosJoin(Registro *registro1, Registro *registro2) {
+
+    printf("%d %s %s %d %s\n", registro1->codEstacao, registro1->nomeEstacao, registro1->nomeLinha,
+                             registro2->codEstacao, registro2->nomeEstacao);
+        
+}
