@@ -1,12 +1,12 @@
 # Sistema de Gerenciamento de Arquivos
 
-Este trabalho tem como objetivo obter dados de um arquivo de entrada e gerar um arquivo binário com esses dados usando a linguagem C, bem como realizar operações de busca, remoção e atualização no arquivo binário gerado.
+Este trabalho tem como objetivo obter dados de um arquivo de entrada e gerar um arquivo binário com esses dados usando a linguagem C, bem como realizar operações de busca, remoção, atualização, ordenação e cruzamento (junção) de dados no arquivo binário gerado.
 
-O intuito principal do trabalho é a manipulação direta de memória secundária e organização de arquivos. Isso é feito por meio da implementação de operações fundamentais de um banco de dados sobre um arquivo binário de registros de tamanho fixo, suportado por uma estrutura de indexação avançada (Árvore-B).
+O intuito principal do trabalho é a manipulação direta de memória secundária e organização de arquivos. Isso é feito por meio da implementação de operações fundamentais de um banco de dados sobre um arquivo binário de registros de tamanho fixo, suportado por uma estrutura de indexação avançada (Árvore-B) e algoritmos otimizados de junção relacional.
 
 ## 🚀 Funcionalidades 
 
-O sistema suporta 10 operações fundamentais, selecionáveis via entrada padrão (stdin):
+O sistema suporta 14 operações fundamentais, selecionáveis via entrada padrão (stdin):
 
 1. **Create Table**: Lê dados de um arquivo .csv e converte-os para um arquivo .bin estruturado em registros de tamanho fixo (80 bytes) e inicializando o cabeçalho (17 bytes).
 
@@ -28,6 +28,14 @@ O sistema suporta 10 operações fundamentais, selecionáveis via entrada padrã
 
 10. **Delete (Sincronizado)**: Remove registros logicamente do arquivo de dados e exclui de forma irreversível a chave correspondente do índice Árvore-B. Trata ativamente o rebalanceamento da árvore, efetuando empréstimos (redistribuições) e fusões (concatenações) para corrigir *underflows*.
 
+11. **Nested Loop Join (Junção de Loop Aninhado)**: Realiza a junção entre dois arquivos de dados por meio de varredura sequencial completa. É uma estratégia de força bruta com complexidade O(n²), ideal para consultas onde não há índices disponíveis.
+
+12. **Index Nested Loop Join (Junção de Loop Único)**: Otimiza a junção utilizando um índice Árvore-B. Para cada registro do arquivo externo, a busca no arquivo interno é feita via árvore, transformando a complexidade do loop interno de O(n) para O(log n).
+
+13. **Order By (Ordenação em RAM)**: Carrega os registros válidos do arquivo binário para a memória principal, ordena-os de forma crescente com base em um campo específico (usando o algoritmo `qsort`) e persiste o resultado em um novo arquivo binário, ignorando os registros logicamente removidos.
+
+14. **Sort-Merge Join (Junção Ordenação-Intercalação)**: A mais eficiente abordagem de junção em memória RAM. Ordena os dois arquivos de entrada usando a funcionalidade de OrderBy e realiza o cruzamento (merge) paralelo das chaves, operando a junção de forma sequencial otimizada em tempo O(n + m).
+
 ❗Este trabalho é limitado, de modo que não trata todas as possíveis sequências de entradas.
 
 ## 🏗️ Arquitetura e Estrutura de Diretórios
@@ -35,10 +43,10 @@ O sistema suporta 10 operações fundamentais, selecionáveis via entrada padrã
 O projeto foi feito para garantir alta manutenibilidade e isolamento de responsabilidades:
 
 * `main.c`: Ponto de entrada, responsável apenas por rotear a execução com base no input do usuário.
-* `funcionalidades/`: Contém as funções principais que orquestram a comunicação entre os dados brutos e os índices.
+* `funcionalidades/`: Contém as funções principais que orquestram a comunicação entre os dados brutos, os índices e os algoritmos de junção e ordenação.
 * `registro/`: Contém as definições estritas das structs Cabecalho e Registro, encapsulando grande parte da lógica de `fread`, `fwrite` e cálculos de offset.
 * `arvoreb/`: Contém a implementação completa e generalizada da estrutura Árvore-B, abstraindo a navegação no disco, particionamentos e balanceamento contínuo.
-* `utils/`: Funções utilitárias, incluindo listas encadeadas auxiliares para contagem única de estações e pares, algoritmos de comparação e controle de filtros.
+* `utils/`: Funções utilitárias, incluindo listas encadeadas auxiliares para contagem única de estações e pares, algoritmos de comparação para o `qsort` e controle de filtros.
 * `fornecidas/`: Funções padronizadas fornecidas pelos professores e monitores.
 
 ## 🛠️ Compilação e Execução
